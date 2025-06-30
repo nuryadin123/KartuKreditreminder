@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -234,7 +233,7 @@ export default function Home() {
                     {filteredChartData.length > 0 ? (
                         <DebtChart data={filteredChartData} />
                     ) : (
-                        <div className="flex h-80 items-center justify-center">
+                        <div className="flex h-64 items-center justify-center">
                             <p className="text-muted-foreground">Tidak ada data utang untuk ditampilkan.</p>
                         </div>
                     )}

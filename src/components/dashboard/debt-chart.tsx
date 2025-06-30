@@ -30,7 +30,7 @@ export function DebtChart({ data }: DebtChartProps) {
   };
 
   return (
-    <div className="h-80 w-full">
+    <div className="h-64 w-full">
       <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
         <BarChart
             data={data}
@@ -64,7 +64,7 @@ export function DebtChart({ data }: DebtChartProps) {
                     formatter={(value) => formatCurrency(Number(value))}
                 />}
             />
-            <Bar dataKey="Total Utang" fill="var(--color-Total Utang)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Total Utang" fill="var(--color-Total Utang)" radius={[4, 4, 0, 0]} maxBarSize={60} />
         </BarChart>
     </ChartContainer>
     </div>
