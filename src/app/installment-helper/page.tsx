@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { getInstallmentPlan, type InstallmentPlanOutput } from "@/ai/flows/installment-plan-flow";
 import type { CreditCard, Transaction } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Sparkles, ReceiptText, PlusCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useFirestoreCollection } from "@/hooks/use-firestore";
+import { db } from "@/lib/firebase";
+import { addDoc, collection } from "firebase/firestore";
 
 const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
@@ -29,8 +31,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function InstallmentHelperPage() {
-  const [cards] = useLocalStorage<CreditCard[]>("kredit-track-cards", []);
-  const [, setTransactions] = useLocalStorage<Transaction[]>("kredit-track-transactions", []);
+  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards");
   const [plan, setPlan] = useState<InstallmentPlanOutput | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export default function InstallmentHelperPage() {
     }
   };
 
-  const handleApplyInstallment = () => {
+  const handleApplyInstallment = async () => {
     const formValues = form.getValues();
     if (!plan || !formValues.cardId || formValues.cardId === 'no-card') {
       toast({
@@ -90,8 +91,7 @@ export default function InstallmentHelperPage() {
       return;
     }
 
-    const newTransaction: Transaction = {
-      id: `txn-${Date.now()}`,
+    const newTransaction: Omit<Transaction, 'id'> = {
       cardId: formValues.cardId,
       date: new Date().toISOString(),
       description: `Cicilan: Transaksi ${formatCurrency(formValues.transactionAmount)} selama ${formValues.tenor} bulan`,
@@ -104,14 +104,17 @@ export default function InstallmentHelperPage() {
       },
     };
 
-    setTransactions(prevTransactions => [newTransaction, ...prevTransactions]);
-
-    toast({
-      title: "Cicilan Berhasil Diterapkan",
-      description: "Transaksi baru telah ditambahkan dan akan tersinkronisasi.",
-    });
-
-    setPlan(null); // Reset the view after applying
+    try {
+        await addDoc(collection(db, 'transactions'), newTransaction);
+        toast({
+            title: "Cicilan Berhasil Diterapkan",
+            description: "Transaksi baru telah ditambahkan dan akan tersinkronisasi.",
+        });
+        setPlan(null); // Reset the view after applying
+    } catch (error) {
+        console.error("Error applying installment: ", error);
+        toast({ title: "Gagal Menerapkan", description: "Terjadi kesalahan saat menerapkan cicilan.", variant: "destructive" });
+    }
   };
 
   const selectedCardId = form.watch("cardId");
@@ -176,10 +179,10 @@ export default function InstallmentHelperPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Pilih Kartu (Opsional)</FormLabel>
-                      <Select onValueChange={handleCardChange} value={field.value} disabled={cards.length === 0}>
+                      <Select onValueChange={handleCardChange} value={field.value} disabled={loadingCards || cards.length === 0}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={cards.length > 0 ? "Pilih kartu untuk terapkan cicilan" : "Tidak ada kartu"} />
+                            <SelectValue placeholder={loadingCards ? "Memuat kartu..." : (cards.length > 0 ? "Pilih kartu untuk terapkan cicilan" : "Tidak ada kartu")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

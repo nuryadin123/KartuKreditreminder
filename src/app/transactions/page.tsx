@@ -31,17 +31,18 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { mockCards as initialCards, mockTransactions as initialTransactions } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
 import type { Transaction, CreditCard } from "@/types";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { useToast } from "@/hooks/use-toast";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useFirestoreCollection } from "@/hooks/use-firestore";
+import { db } from "@/lib/firebase";
+import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("kredit-track-transactions", initialTransactions);
-  const [cards] = useLocalStorage<CreditCard[]>("kredit-track-cards", initialCards);
+  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions");
+  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards");
 
   const [filterCard, setFilterCard] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -52,18 +53,22 @@ export default function TransactionsPage() {
   const { toast } = useToast();
 
   const filteredTransactions = useMemo(() => {
-    return transactions
+    return [...transactions] // Create a mutable copy for sorting
       .filter(t => filterCard === 'all' || t.cardId === filterCard)
       .filter(t => filterStatus === 'all' || (t.category === 'Pembayaran' ? t.status === 'lunas' : t.status === filterStatus))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, filterCard, filterStatus]);
 
-  const handleStatusChange = (transactionId: string, checked: boolean | 'indeterminate') => {
-    setTransactions(
-      transactions.map(t =>
-        t.id === transactionId ? { ...t, status: checked ? 'lunas' : 'belum lunas' } : t
-      )
-    );
+  const handleStatusChange = async (transactionId: string, checked: boolean | 'indeterminate') => {
+    const transactionRef = doc(db, 'transactions', transactionId);
+    try {
+        await updateDoc(transactionRef, {
+            status: checked ? 'lunas' : 'belum lunas'
+        });
+    } catch (error) {
+        console.error("Error updating status: ", error);
+        toast({ title: "Gagal Memperbarui", description: "Terjadi kesalahan saat memperbarui status.", variant: "destructive" });
+    }
   };
   
   const getCardName = (cardId: string) => {
@@ -90,34 +95,47 @@ export default function TransactionsPage() {
     setIsDeleteAlertOpen(false);
   };
 
-  const handleSubmit = (values: Omit<Transaction, "id" | "status" | "installmentDetails"> & {date: Date}) => {
+  const handleSubmit = async (values: Omit<Transaction, "id" | "status" | "installmentDetails"> & {date: Date}) => {
     const transactionData = {
         ...values,
         date: values.date.toISOString(),
     }
-    if (selectedTransaction) {
-      setTransactions(transactions.map(t => t.id === selectedTransaction.id ? { ...selectedTransaction, ...transactionData } : t));
-      toast({ title: "Transaksi Diperbarui", description: "Data transaksi berhasil diperbarui." });
-    } else {
-      const newTransaction: Transaction = { 
-          id: `txn-${Date.now()}`,
-          status: 'belum lunas', 
-          ...transactionData
-        };
-      setTransactions([newTransaction, ...transactions]);
-      toast({ title: "Transaksi Ditambahkan", description: "Transaksi baru berhasil ditambahkan." });
+    try {
+        if (selectedTransaction) {
+            const transactionRef = doc(db, 'transactions', selectedTransaction.id);
+            // Don't include ID in the update payload
+            const { id, ...updateData } = { ...selectedTransaction, ...transactionData };
+            await updateDoc(transactionRef, updateData as any);
+            toast({ title: "Transaksi Diperbarui", description: "Data transaksi berhasil diperbarui." });
+        } else {
+            const newTransactionData: Omit<Transaction, 'id'> = { 
+            status: 'belum lunas', 
+            ...transactionData
+            };
+            await addDoc(collection(db, 'transactions'), newTransactionData);
+            toast({ title: "Transaksi Ditambahkan", description: "Transaksi baru berhasil ditambahkan." });
+        }
+    } catch(error) {
+        console.error("Error saving transaction: ", error);
+        toast({ title: "Gagal Menyimpan", description: "Terjadi kesalahan saat menyimpan transaksi.", variant: "destructive" });
     }
     handleCloseForm();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedTransaction) {
-        setTransactions(transactions.filter(t => t.id !== selectedTransaction.id));
-        toast({ title: "Transaksi Dihapus", description: "Data transaksi berhasil dihapus.", variant: 'destructive' });
+        try {
+            await deleteDoc(doc(db, 'transactions', selectedTransaction.id));
+            toast({ title: "Transaksi Dihapus", description: "Data transaksi berhasil dihapus.", variant: 'destructive' });
+        } catch (error) {
+            console.error("Error deleting transaction: ", error);
+            toast({ title: "Gagal Menghapus", description: "Terjadi kesalahan saat menghapus transaksi.", variant: "destructive" });
+        }
         handleCloseDeleteAlert();
     }
   };
 
+  const isLoading = loadingCards || loadingTransactions;
 
   return (
     <>
@@ -132,7 +150,7 @@ export default function TransactionsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle>Transaksi</CardTitle>
               <div className="flex gap-2">
-                <Select value={filterCard} onValueChange={setFilterCard}>
+                <Select value={filterCard} onValueChange={setFilterCard} disabled={isLoading}>
                   <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter Kartu" />
                   </SelectTrigger>
@@ -143,7 +161,7 @@ export default function TransactionsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <Select value={filterStatus} onValueChange={setFilterStatus} disabled={isLoading}>
                   <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter Status" />
                   </SelectTrigger>
@@ -162,81 +180,85 @@ export default function TransactionsPage() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">Lunas</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Kartu</TableHead>
-                    <TableHead>Deskripsi</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead className="text-right">Jumlah</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="w-[50px] text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={transaction.status === 'lunas'}
-                          onCheckedChange={(checked) => handleStatusChange(transaction.id, checked)}
-                          aria-label={`Mark ${transaction.description} as paid`}
-                          disabled={transaction.category === 'Pembayaran'}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(transaction.date))}
-                      </TableCell>
-                      <TableCell>{getCardName(transaction.cardId)}</TableCell>
-                      <TableCell className="font-medium">
-                        {transaction.installmentDetails ? (
-                          <>
-                            <span>{`Cicilan: ${formatCurrency(transaction.installmentDetails.monthlyInstallment)}/bln`}</span>
-                            <div className="text-xs text-muted-foreground">
-                                {`Dari total ${formatCurrency(transaction.amount)} (${transaction.installmentDetails.tenor} bln)`}
-                            </div>
-                          </>
-                        ) : (
-                          transaction.description
-                        )}
-                      </TableCell>
-                      <TableCell>
-                          <Badge variant={transaction.category === 'Pembayaran' ? 'default' : 'secondary'}>{transaction.category}</Badge>
-                      </TableCell>
-                      <TableCell className={cn("text-right", transaction.category === 'Pembayaran' && 'text-green-600')}>
-                        {transaction.category === 'Pembayaran' ? `+${formatCurrency(transaction.amount)}` : formatCurrency(transaction.amount)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={transaction.status === 'lunas' ? 'default' : 'destructive'} className={cn(transaction.status === 'lunas' ? 'bg-green-500/20 text-green-700 border-green-500/30' : 'bg-destructive/10 text-destructive border-destructive/20', 'capitalize')}>
-                          {transaction.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                          <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleOpenForm(transaction)} disabled={transaction.category === 'Pembayaran' || !!transaction.installmentDetails}>
-                                      <Edit className="mr-2 h-4 w-4"/>
-                                      Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleOpenDeleteAlert(transaction)} className="text-destructive focus:text-destructive">
-                                      <Trash2 className="mr-2 h-4 w-4"/>
-                                      Hapus
-                                  </DropdownMenuItem>
-                              </DropdownMenuContent>
-                          </DropdownMenu>
-                      </TableCell>
+              {isLoading ? (
+                  <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin mx-auto"/></div>
+              ) : (
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[50px]">Lunas</TableHead>
+                        <TableHead>Tanggal</TableHead>
+                        <TableHead>Kartu</TableHead>
+                        <TableHead>Deskripsi</TableHead>
+                        <TableHead>Kategori</TableHead>
+                        <TableHead className="text-right">Jumlah</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="w-[50px] text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {filteredTransactions.length === 0 && (
+                    </TableHeader>
+                    <TableBody>
+                    {filteredTransactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                        <TableCell>
+                            <Checkbox
+                            checked={transaction.status === 'lunas'}
+                            onCheckedChange={(checked) => handleStatusChange(transaction.id, checked)}
+                            aria-label={`Mark ${transaction.description} as paid`}
+                            disabled={transaction.category === 'Pembayaran'}
+                            />
+                        </TableCell>
+                        <TableCell>
+                            {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(transaction.date))}
+                        </TableCell>
+                        <TableCell>{getCardName(transaction.cardId)}</TableCell>
+                        <TableCell className="font-medium">
+                            {transaction.installmentDetails ? (
+                            <>
+                                <span>{`Cicilan: ${formatCurrency(transaction.installmentDetails.monthlyInstallment)}/bln`}</span>
+                                <div className="text-xs text-muted-foreground">
+                                    {`Dari total ${formatCurrency(transaction.amount)} (${transaction.installmentDetails.tenor} bln)`}
+                                </div>
+                            </>
+                            ) : (
+                            transaction.description
+                            )}
+                        </TableCell>
+                        <TableCell>
+                            <Badge variant={transaction.category === 'Pembayaran' ? 'default' : 'secondary'}>{transaction.category}</Badge>
+                        </TableCell>
+                        <TableCell className={cn("text-right", transaction.category === 'Pembayaran' && 'text-green-600')}>
+                            {transaction.category === 'Pembayaran' ? `+${formatCurrency(transaction.amount)}` : formatCurrency(transaction.amount)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                            <Badge variant={transaction.status === 'lunas' ? 'default' : 'destructive'} className={cn(transaction.status === 'lunas' ? 'bg-green-500/20 text-green-700 border-green-500/30' : 'bg-destructive/10 text-destructive border-destructive/20', 'capitalize')}>
+                            {transaction.status}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleOpenForm(transaction)} disabled={transaction.category === 'Pembayaran' || !!transaction.installmentDetails}>
+                                        <Edit className="mr-2 h-4 w-4"/>
+                                        Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenDeleteAlert(transaction)} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4"/>
+                                        Hapus
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+              )}
+              {!isLoading && filteredTransactions.length === 0 && (
                   <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg mt-4">
                       <h3 className="text-lg font-medium">Tidak ada transaksi</h3>
                       <p className="text-sm">Tidak ada transaksi yang cocok dengan filter Anda.</p>

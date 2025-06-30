@@ -1,21 +1,21 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockCards as initialCards, mockTransactions as initialTransactions } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
-import { CreditCard, DollarSign, Calendar } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, Loader2 } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
 import type { CreditCard as CreditCardType, Transaction } from "@/types";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useFirestoreCollection } from "@/hooks/use-firestore";
 
 export default function Home() {
-  const [cards] = useLocalStorage<CreditCardType[]>("kredit-track-cards", initialCards);
-  const [transactions] = useLocalStorage<Transaction[]>("kredit-track-transactions", initialTransactions);
+  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCardType>("cards");
+  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions");
   const [upcomingDueDate, setUpcomingDueDate] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (cards.length === 0) return;
+    if (loadingCards || cards.length === 0) return;
     
     const getNextDueDate = (card: CreditCardType) => {
       const today = new Date();
@@ -31,9 +31,11 @@ export default function Home() {
       .sort((a, b) => a.getTime() - b.getTime())[0];
     
     setUpcomingDueDate(nextDueDate || null);
-  }, [cards]);
+  }, [cards, loadingCards]);
 
-  const { totalDebt, chartData } = (() => {
+  const { totalDebt, chartData } = useMemo(() => {
+    if (loadingCards || loadingTransactions) return { totalDebt: 0, chartData: [] };
+    
     const spending = transactions
         .filter(t => t.category !== 'Pembayaran')
         .reduce((sum, t) => sum + t.amount, 0);
@@ -56,7 +58,9 @@ export default function Home() {
     });
 
     return { totalDebt, chartData };
-  })();
+  }, [cards, transactions, loadingCards, loadingTransactions]);
+
+  const isLoading = loadingCards || loadingTransactions;
 
   return (
     <div className="flex flex-col gap-8">
@@ -65,51 +69,59 @@ export default function Home() {
         <p className="text-muted-foreground">Ringkasan utang dan kartu kredit Anda.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Utang</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalDebt)}</div>
-            <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kartu Aktif</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{cards.length}</div>
-            <p className="text-xs text-muted-foreground">Total kartu kredit terdaftar</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pembayaran Berikutnya</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'N/A'}
+      {isLoading ? (
+         <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Utang</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{formatCurrency(totalDebt)}</div>
+                    <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
+                </CardContent>
+                </Card>
+                <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Kartu Aktif</CardTitle>
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{cards.length}</div>
+                    <p className="text-xs text-muted-foreground">Total kartu kredit terdaftar</p>
+                </CardContent>
+                </Card>
+                <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pembayaran Berikutnya</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">
+                    {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'N/A'}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                    Tanggal jatuh tempo terdekat
+                    </p>
+                </CardContent>
+                </Card>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Tanggal jatuh tempo terdekat
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribusi Utang</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DebtChart data={chartData} />
-        </CardContent>
-      </Card>
+            <Card>
+                <CardHeader>
+                <CardTitle>Distribusi Utang</CardTitle>
+                </CardHeader>
+                <CardContent>
+                <DebtChart data={chartData} />
+                </CardContent>
+            </Card>
+        </>
+      )}
     </div>
   );
 }
