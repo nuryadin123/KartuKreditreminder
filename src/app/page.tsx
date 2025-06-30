@@ -8,11 +8,16 @@ import { CreditCard, DollarSign, Calendar, Loader2 } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
 import type { CreditCard as CreditCardType, Transaction } from "@/types";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
+import { useToast } from "@/hooks/use-toast";
+import { addDays, isAfter, isBefore, startOfToday, subDays } from "date-fns";
 
 export default function Home() {
   const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCardType>("cards");
   const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions");
   const [upcomingDueDate, setUpcomingDueDate] = useState<Date | null>(null);
+  const { toast } = useToast();
+  const [notificationsShown, setNotificationsShown] = useState(false);
+
 
   useEffect(() => {
     if (loadingCards || cards.length === 0) return;
@@ -59,6 +64,33 @@ export default function Home() {
 
     return { totalDebt, chartData };
   }, [cards, transactions, loadingCards, loadingTransactions]);
+
+  useEffect(() => {
+    const isLoading = loadingCards || loadingTransactions;
+    if (isLoading || notificationsShown || cards.length === 0) {
+      return;
+    }
+
+    const today = startOfToday();
+    const threeDaysFromNow = addDays(today, 3);
+
+    cards.forEach(card => {
+      const debtData = chartData.find(d => d.name === card.cardName);
+      const debt = debtData ? debtData["Total Utang"] : 0;
+      if (debt <= 0) return;
+
+      const dueDateInCycle = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
+      
+      if (isAfter(dueDateInCycle, subDays(today, 1)) && isBefore(dueDateInCycle, threeDaysFromNow)) {
+        toast({
+          title: "🔔 Pengingat Pembayaran",
+          description: `Tagihan kartu ${card.cardName} sebesar ${formatCurrency(debt)} akan jatuh tempo pada ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long'}).format(dueDateInCycle)}.`,
+        });
+      }
+    });
+
+    setNotificationsShown(true);
+  }, [cards, chartData, loadingCards, loadingTransactions, notificationsShown, toast]);
 
   const isLoading = loadingCards || loadingTransactions;
 
