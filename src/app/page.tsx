@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -171,8 +170,8 @@ export default function Home() {
       try {
         await addDoc(collection(db, 'transactions'), newPayment);
         toast({ title: "Pembayaran Berhasil", description: `Pembayaran sebesar ${formatCurrency(amount)} telah dicatat.` });
-      } catch (error) {
-        toast({ title: "Gagal Membayar", description: "Terjadi kesalahan saat mencatat pembayaran.", variant: "destructive" });
+      } catch (error: any) {
+        toast({ title: "Gagal Membayar", description: error.message || "Terjadi kesalahan saat mencatat pembayaran.", variant: "destructive" });
       }
       setIsPaymentDialogOpen(false);
       setSelectedCardForPayment(null);

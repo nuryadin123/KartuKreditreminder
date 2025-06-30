@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -83,9 +82,9 @@ export default function InstallmentHelperPage() {
         adminFeeMarketplace: adminFeeMarketplaceAmount,
       });
       setPlan(result);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setError("Gagal menghasilkan simulasi. Silakan coba lagi.");
+      setError(e.message || "Gagal menghasilkan simulasi. Silakan coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -128,9 +127,9 @@ export default function InstallmentHelperPage() {
             description: "Transaksi baru telah ditambahkan dan akan tersinkronisasi.",
         });
         setPlan(null); // Reset the view after applying
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error applying installment: ", error);
-        toast({ title: "Gagal Menerapkan", description: "Terjadi kesalahan saat menerapkan cicilan.", variant: "destructive" });
+        toast({ title: "Gagal Menerapkan", description: error.message || "Terjadi kesalahan saat menerapkan cicilan.", variant: "destructive" });
     }
   };
 

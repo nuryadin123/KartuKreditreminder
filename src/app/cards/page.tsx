@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -164,8 +163,9 @@ export default function CardsPage() {
             await addDoc(collection(db, 'cards'), cardData);
             toast({ title: "Kartu Ditambahkan", description: "Kartu kredit baru berhasil ditambahkan." });
         }
-    } catch (error) {
-        toast({ title: "Gagal Menyimpan", description: "Terjadi kesalahan saat menyimpan kartu.", variant: "destructive" });
+    } catch (error: any) {
+        console.error("Gagal menyimpan kartu:", error);
+        toast({ title: "Gagal Menyimpan", description: error.message || "Terjadi kesalahan saat menyimpan kartu.", variant: "destructive" });
     }
     handleCloseForm();
   };
@@ -175,8 +175,8 @@ export default function CardsPage() {
         try {
             await deleteDoc(doc(db, 'cards', selectedCard.id));
             toast({ title: "Kartu Dihapus", description: "Data kartu kredit berhasil dihapus.", variant: 'destructive' });
-        } catch (error) {
-            toast({ title: "Gagal Menghapus", description: "Terjadi kesalahan saat menghapus kartu.", variant: "destructive" });
+        } catch (error: any) {
+            toast({ title: "Gagal Menghapus", description: error.message || "Terjadi kesalahan saat menghapus kartu.", variant: "destructive" });
         }
         handleCloseDeleteAlert();
     }
@@ -196,8 +196,8 @@ export default function CardsPage() {
       try {
         await addDoc(collection(db, 'transactions'), newPayment);
         toast({ title: "Pembayaran Berhasil", description: `Pembayaran sebesar ${formatCurrency(amount)} telah dicatat.` });
-      } catch (error) {
-        toast({ title: "Gagal Membayar", description: "Terjadi kesalahan saat mencatat pembayaran.", variant: "destructive" });
+      } catch (error: any) {
+        toast({ title: "Gagal Membayar", description: error.message || "Terjadi kesalahan saat mencatat pembayaran.", variant: "destructive" });
       }
       handleClosePaymentDialog();
     }

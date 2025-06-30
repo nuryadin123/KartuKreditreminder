@@ -66,9 +66,9 @@ export default function TransactionsPage() {
             status: isPaid ? 'lunas' : 'belum lunas'
         });
         toast({ title: "Status Diperbarui", description: "Status transaksi telah berhasil diperbarui." });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error updating status: ", error);
-        toast({ title: "Gagal Memperbarui", description: "Terjadi kesalahan saat memperbarui status.", variant: "destructive" });
+        toast({ title: "Gagal Memperbarui", description: error.message || "Terjadi kesalahan saat memperbarui status.", variant: "destructive" });
     }
   };
   
@@ -110,8 +110,7 @@ export default function TransactionsPage() {
     try {
         if (selectedTransaction) {
             const transactionRef = doc(db, 'transactions', selectedTransaction.id);
-            // Don't include ID in the update payload
-            const { id, userId, ...updateData } = { ...selectedTransaction, ...transactionData };
+            const { id, ...updateData } = { ...selectedTransaction, ...transactionData };
             await updateDoc(transactionRef, updateData as any);
             toast({ title: "Transaksi Diperbarui", description: "Data transaksi berhasil diperbarui." });
         } else {
@@ -122,9 +121,9 @@ export default function TransactionsPage() {
             await addDoc(collection(db, 'transactions'), newTransactionData);
             toast({ title: "Transaksi Ditambahkan", description: "Transaksi baru berhasil ditambahkan." });
         }
-    } catch(error) {
+    } catch(error: any) {
         console.error("Error saving transaction: ", error);
-        toast({ title: "Gagal Menyimpan", description: "Terjadi kesalahan saat menyimpan transaksi.", variant: "destructive" });
+        toast({ title: "Gagal Menyimpan", description: error.message || "Terjadi kesalahan saat menyimpan transaksi.", variant: "destructive" });
     }
     handleCloseForm();
   };
@@ -134,9 +133,9 @@ export default function TransactionsPage() {
         try {
             await deleteDoc(doc(db, 'transactions', selectedTransaction.id));
             toast({ title: "Transaksi Dihapus", description: "Data transaksi berhasil dihapus.", variant: 'destructive' });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error deleting transaction: ", error);
-            toast({ title: "Gagal Menghapus", description: "Terjadi kesalahan saat menghapus transaksi.", variant: "destructive" });
+            toast({ title: "Gagal Menghapus", description: error.message || "Terjadi kesalahan saat menghapus transaksi.", variant: "destructive" });
         }
         handleCloseDeleteAlert();
     }
