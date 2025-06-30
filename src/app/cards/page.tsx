@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -149,15 +150,24 @@ export default function CardsPage() {
         toast({ title: "Gagal", description: "Anda harus masuk untuk menyimpan kartu.", variant: "destructive" });
         return;
     }
-    const cardData = {
+
+    // Create a mutable copy of the values to avoid sending undefined to Firestore
+    const cardData: { [key: string]: any } = {
         ...values,
         userId: user.uid,
-        lastLimitIncreaseDate: values.lastLimitIncreaseDate?.toISOString()
+    };
+
+    if (values.lastLimitIncreaseDate) {
+        cardData.lastLimitIncreaseDate = values.lastLimitIncreaseDate.toISOString();
+    } else {
+        // Firestore doesn't allow 'undefined' fields. Delete the key if it's not set.
+        delete cardData.lastLimitIncreaseDate;
     }
+    
     try {
         if (selectedCard) {
             const cardRef = doc(db, 'cards', selectedCard.id);
-            await updateDoc(cardRef, cardData as any);
+            await updateDoc(cardRef, cardData);
             toast({ title: "Kartu Diperbarui", description: "Data kartu kredit berhasil diperbarui." });
         } else {
             await addDoc(collection(db, 'cards'), cardData);
@@ -423,3 +433,5 @@ export default function CardsPage() {
     </>
   );
 }
+
+    
