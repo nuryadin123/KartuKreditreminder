@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -100,14 +99,15 @@ export default function InstallmentHelperPage() {
       return;
     }
 
-    const adminFeeBankAmount = formValues.adminFeeBankPercentage ? (formValues.transactionAmount * formValues.adminFeeBankPercentage) / 100 : 0;
-    const adminFeeMarketplaceAmount = formValues.adminFeeMarketplacePercentage ? (formValues.transactionAmount * formValues.adminFeeMarketplacePercentage) / 100 : 0;
-    const totalPrincipal = (formValues.transactionAmount || 0) + adminFeeBankAmount + adminFeeMarketplaceAmount;
+    const transactionAmountNumber = Number(formValues.transactionAmount || 0);
+    const adminFeeBankAmount = formValues.adminFeeBankPercentage ? (transactionAmountNumber * Number(formValues.adminFeeBankPercentage)) / 100 : 0;
+    const adminFeeMarketplaceAmount = formValues.adminFeeMarketplacePercentage ? (transactionAmountNumber * Number(formValues.adminFeeMarketplacePercentage)) / 100 : 0;
+    const totalPrincipal = transactionAmountNumber + adminFeeBankAmount + adminFeeMarketplaceAmount;
 
     const newTransaction: Omit<Transaction, 'id'> = {
       cardId: formValues.cardId,
       date: new Date().toISOString(),
-      description: `Cicilan: Transaksi ${formatCurrency(formValues.transactionAmount)} (+ admin) selama ${formValues.tenor} bulan`,
+      description: `Cicilan: Transaksi ${formatCurrency(transactionAmountNumber)} (+ admin) selama ${formValues.tenor} bulan`,
       amount: totalPrincipal,
       category: 'Lainnya',
       status: 'belum lunas',
