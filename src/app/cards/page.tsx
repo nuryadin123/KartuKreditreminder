@@ -28,7 +28,14 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2, Search } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
@@ -56,16 +63,7 @@ export default function CardsPage() {
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredCards = useMemo(() => {
-    return cards
-      .filter(card => 
-        !searchQuery ||
-        card.cardName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.bankName.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .sort((a, b) => b.creditLimit - a.creditLimit);
-  }, [cards, searchQuery]);
+  const [sortOption, setSortOption] = useState<string>("limit-desc");
 
   const cardDebts = useMemo(() => {
     const debts = new Map<string, number>();
@@ -83,6 +81,34 @@ export default function CardsPage() {
     });
     return debts;
   }, [cards, transactions, loadingCards, loadingTransactions]);
+
+  const filteredCards = useMemo(() => {
+    const sorted = [...cards].sort((a, b) => {
+        const debtA = cardDebts.get(a.id) || 0;
+        const debtB = cardDebts.get(b.id) || 0;
+        switch (sortOption) {
+            case 'limit-asc':
+                return a.creditLimit - b.creditLimit;
+            case 'debt-desc':
+                return debtB - debtA;
+            case 'debt-asc':
+                return debtA - debtB;
+            case 'name-asc':
+                return a.cardName.localeCompare(b.cardName);
+            case 'name-desc':
+                return b.cardName.localeCompare(a.cardName);
+            case 'limit-desc':
+            default:
+                return b.creditLimit - a.creditLimit;
+        }
+    });
+
+    return sorted.filter(card =>
+        !searchQuery ||
+        card.cardName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        card.bankName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [cards, searchQuery, sortOption, cardDebts]);
 
   const handleOpenForm = (card: CreditCard | null = null) => {
     setSelectedCard(card);
@@ -201,12 +227,25 @@ export default function CardsPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                     type="search"
-                    placeholder="Cari kartu atau bank..."
-                    className="pl-8 w-full sm:w-[250px] lg:w-[300px]"
+                    placeholder="Cari kartu..."
+                    className="pl-8 w-full sm:w-[150px] lg:w-[200px]"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
+            <Select value={sortOption} onValueChange={setSortOption}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Urutkan berdasarkan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="limit-desc">Limit (Tertinggi)</SelectItem>
+                <SelectItem value="limit-asc">Limit (Terendah)</SelectItem>
+                <SelectItem value="debt-desc">Utang (Tertinggi)</SelectItem>
+                <SelectItem value="debt-asc">Utang (Terendah)</SelectItem>
+                <SelectItem value="name-asc">Nama (A-Z)</SelectItem>
+                <SelectItem value="name-desc">Nama (Z-A)</SelectItem>
+              </SelectContent>
+            </Select>
             <Button onClick={() => handleOpenForm()}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Tambah Kartu
