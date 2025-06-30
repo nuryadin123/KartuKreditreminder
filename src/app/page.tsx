@@ -90,11 +90,10 @@ export default function Home() {
     return { totalDebt, totalRemainingLimit, chartData };
   }, [cards, transactions, loadingCards, loadingTransactions]);
 
-  const upcomingPayments = useMemo(() => {
+  const cardBillSummaries = useMemo(() => {
     if (loadingCards || loadingTransactions) return [];
 
     const today = startOfToday();
-    const sevenDaysFromNow = addDays(today, 7);
     const result: { card: CreditCardType; debt: number; dueDate: Date }[] = [];
 
     const getNextDueDate = (dueDateNumber: number) => {
@@ -108,16 +107,14 @@ export default function Home() {
     cards.forEach(card => {
       const debtData = chartData.find(d => d.name === card.cardName);
       const debt = debtData ? debtData["Total Utang"] : 0;
-      if (debt <= 0) return;
+      if (debt <= 0) return; // Hanya tampilkan kartu yang punya utang
 
       const nextDueDate = getNextDueDate(card.dueDate);
 
-      if (isAfter(nextDueDate, subDays(today, 1)) && isBefore(nextDueDate, sevenDaysFromNow)) {
-        result.push({ card, debt, dueDate: nextDueDate });
-      }
+      result.push({ card, debt, dueDate: nextDueDate });
     });
 
-    return result.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+    return result.sort((a, b) => b.debt - a.debt); // Urutkan berdasarkan utang terbesar
   }, [cards, chartData, loadingCards, loadingTransactions]);
 
   useEffect(() => {
@@ -252,12 +249,12 @@ export default function Home() {
 
               <Card>
                 <CardHeader>
-                    <CardTitle>Pengingat Pembayaran Mendatang</CardTitle>
-                    <CardDescription>Tagihan yang akan jatuh tempo dalam 7 hari ke depan.</CardDescription>
+                    <CardTitle>Ringkasan Tagihan Kartu</CardTitle>
+                    <CardDescription>Daftar semua kartu dengan tagihan yang belum lunas. Diurutkan berdasarkan utang terbesar.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {upcomingPayments.length > 0 ? (
-                        upcomingPayments.map(({ card, debt, dueDate }) => (
+                    {cardBillSummaries.length > 0 ? (
+                        cardBillSummaries.map(({ card, debt, dueDate }) => (
                             <Alert key={card.id}>
                                 <Bell className="h-4 w-4" />
                                 <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
@@ -265,7 +262,7 @@ export default function Home() {
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
-                                            <span className="font-semibold block sm:inline sm:ml-4">{formatCurrency(debt)}</span>
+                                            <span className="font-semibold block sm:inline sm:ml-4 text-destructive">{formatCurrency(debt)}</span>
                                         </div>
                                         <Button size="sm" onClick={() => handleOpenPaymentDialog(card)}>Bayar</Button>
                                     </div>
@@ -273,7 +270,7 @@ export default function Home() {
                             </Alert>
                         ))
                     ) : (
-                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang akan jatuh tempo dalam waktu dekat.</p>
+                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang perlu dibayar. Selamat!</p>
                     )}
                 </CardContent>
               </Card>
