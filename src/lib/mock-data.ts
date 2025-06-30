@@ -10,6 +10,7 @@ export const mockCards: CreditCard[] = [
     dueDate: 25,
     interestRate: 2.5,
     last4Digits: "1234",
+    limitIncreaseReminder: "6-bulan",
   },
   {
     id: "card-2",
@@ -20,6 +21,7 @@ export const mockCards: CreditCard[] = [
     dueDate: 15,
     interestRate: 2.75,
     last4Digits: "5678",
+    limitIncreaseReminder: "3-bulan",
   },
   {
     id: "card-3",
@@ -30,6 +32,7 @@ export const mockCards: CreditCard[] = [
     dueDate: 5,
     interestRate: 1.9,
     last4Digits: "9012",
+    limitIncreaseReminder: "tidak",
   },
 ];
 

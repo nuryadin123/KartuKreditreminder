@@ -220,6 +220,14 @@ export default function CardsPage() {
                   <span className="text-sm text-muted-foreground">Suku Bunga</span>
                   <span className="font-semibold">{card.interestRate}% / bulan</span>
                 </div>
+                <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-muted-foreground">Pengingat Limit</span>
+                    <span className="font-semibold capitalize">
+                        {card.limitIncreaseReminder === 'tidak' || !card.limitIncreaseReminder
+                            ? 'Tidak Aktif'
+                            : `Per ${card.limitIncreaseReminder.replace('-', ' ')}`}
+                    </span>
+                </div>
               </CardContent>
               <CardFooter>
                 <Button onClick={() => handleOpenPaymentDialog(card)} className="w-full">

@@ -7,6 +7,7 @@ export interface CreditCard {
   dueDate: number; // day of month
   interestRate: number;
   last4Digits: string;
+  limitIncreaseReminder?: '3-bulan' | '6-bulan' | 'tidak';
 }
 
 export interface Transaction {

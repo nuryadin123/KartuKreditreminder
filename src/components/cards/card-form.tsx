@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const formSchema = z.object({
   bankName: z.string().min(2, "Nama bank minimal 2 karakter."),
@@ -25,6 +26,7 @@ const formSchema = z.object({
   billingDate: z.coerce.number().min(1, "Tanggal cetak tagihan harus antara 1 dan 31.").max(31),
   dueDate: z.coerce.number().min(1, "Tanggal jatuh tempo harus antara 1 dan 31.").max(31),
   interestRate: z.coerce.number().min(0, "Suku bunga harus angka positif."),
+  limitIncreaseReminder: z.enum(['tidak', '3-bulan', '6-bulan']).optional().default('tidak'),
 });
 
 type CardFormValues = z.infer<typeof formSchema>;
@@ -47,6 +49,7 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
       billingDate: defaultValues?.billingDate || 1,
       dueDate: defaultValues?.dueDate || 1,
       interestRate: defaultValues?.interestRate || 1.75,
+      limitIncreaseReminder: defaultValues?.limitIncreaseReminder || 'tidak',
     },
   });
 
@@ -148,6 +151,48 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
               </FormItem>
             )}
           />
+        <FormField
+            control={form.control}
+            name="limitIncreaseReminder"
+            render={({ field }) => (
+            <FormItem className="space-y-3">
+                <FormLabel>Pengingat Tambah Limit</FormLabel>
+                <FormControl>
+                <RadioGroup
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    className="flex flex-col space-y-1"
+                >
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                        <RadioGroupItem value="tidak" />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                        Tidak Aktif
+                    </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                        <RadioGroupItem value="3-bulan" />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                        Setiap 3 Bulan
+                    </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                        <RadioGroupItem value="6-bulan" />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                        Setiap 6 Bulan
+                    </FormLabel>
+                    </FormItem>
+                </RadioGroup>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
         <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                 Batal
