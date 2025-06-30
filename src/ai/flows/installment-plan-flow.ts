@@ -15,6 +15,7 @@ const InstallmentPlanInputSchema = z.object({
   transactionAmount: z.number().describe('The total amount of the transaction to be converted into installments.'),
   interestRate: z.number().describe('The monthly interest rate of the credit card (as a percentage, e.g., 1.75 for 1.75%).'),
   tenor: z.number().int().min(1).describe('The desired number of months for the installment plan (tenor).'),
+  bankName: z.string().optional().describe('The name of the bank for providing contextual advice on the interest rate.'),
 });
 export type InstallmentPlanInput = z.infer<typeof InstallmentPlanInputSchema>;
 
@@ -44,12 +45,19 @@ Transaction Details:
 - Amount: {{{transactionAmount}}} IDR
 - Monthly Interest Rate: {{{interestRate}}}%
 - Tenor: {{{tenor}}} months
+{{#if bankName}}- Bank: {{{bankName}}}{{/if}}
 
 Your tasks are:
 1.  **Calculate the fixed monthly installment amount.** Use the standard formula for an annuity loan. The formula is: M = P * (i * (1 + i)^n) / ((1 + i)^n - 1), where P is the principal, i is the monthly interest rate in decimal form (e.g., 1.75% becomes 0.0175), and n is the tenor. Round the result to the nearest whole number.
 2.  **Calculate the total payment and total interest.** Total Payment = Monthly Installment * Tenor. Total Interest = Total Payment - Principal.
 3.  **Generate a month-by-month amortization schedule.** For each month, show the principal payment, interest payment, and the remaining balance. The interest for a month is calculated on the remaining balance from the previous month. The principal payment is the monthly installment minus the interest payment.
-4.  **Provide a brief, insightful piece of financial advice** based on the calculation. The advice must be in Indonesian, easy to understand, and contextually relevant (e.g., comment on the amount of interest, the feasibility of the plan, or offer a helpful tip).
+4.  **Provide a brief, insightful piece of financial advice** based on the calculation. The advice must be in Indonesian and easy to understand.
+    {{#if bankName}}
+    - Critically evaluate the provided interest rate ({{{interestRate}}}%). Compare it to typical credit card interest rates for {{bankName}} in Indonesia (usually between 1.75% and 2.95% per month). State whether the user's rate is competitive, average, or high. For example: "Suku bunga {{interestRate}}% termasuk kompetitif untuk bank {{bankName}}."
+    {{else}}
+    - Comment on the total interest paid relative to the principal amount.
+    {{/if}}
+    - Offer a relevant tip, like paying more than the minimum or considering the impact on their credit score.
 
 Return the result strictly in the specified JSON format. Ensure all calculations are accurate.`,
 });

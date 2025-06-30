@@ -20,7 +20,8 @@ import { formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
-  cardId: z.string({ required_error: "Silakan pilih kartu." }).min(1, "Silakan pilih kartu."),
+  cardId: z.string().optional(),
+  interestRate: z.coerce.number({ required_error: "Suku bunga harus diisi." }).min(0, "Suku bunga tidak boleh negatif."),
   tenor: z.string({ required_error: "Tenor harus diisi." }).min(1, "Tenor harus diisi."),
 });
 
@@ -37,16 +38,21 @@ export default function InstallmentHelperPage() {
     defaultValues: {
       transactionAmount: undefined,
       cardId: "",
+      interestRate: undefined,
       tenor: "",
     },
   });
 
+  const handleCardChange = (cardId: string) => {
+    form.setValue("cardId", cardId, { shouldValidate: true });
+    const selectedCard = cards.find(c => c.id === cardId);
+    if (selectedCard) {
+      form.setValue("interestRate", selectedCard.interestRate, { shouldValidate: true });
+    }
+  };
+
   const onSubmit = async (values: FormValues) => {
     const selectedCard = cards.find(c => c.id === values.cardId);
-    if (!selectedCard) {
-        setError("Kartu kredit tidak ditemukan.");
-        return;
-    }
 
     setIsSubmitting(true);
     setPlan(null);
@@ -55,8 +61,9 @@ export default function InstallmentHelperPage() {
     try {
       const result = await getInstallmentPlan({
         transactionAmount: values.transactionAmount,
-        interestRate: selectedCard.interestRate,
+        interestRate: values.interestRate,
         tenor: Number(values.tenor),
+        bankName: selectedCard?.bankName,
       });
       setPlan(result);
     } catch (e) {
@@ -82,7 +89,7 @@ export default function InstallmentHelperPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="transactionAmount"
@@ -96,37 +103,13 @@ export default function InstallmentHelperPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="cardId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Kartu Kredit</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={cards.length === 0}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={cards.length > 0 ? "Pilih kartu" : "Tidak ada kartu"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {cards.map(card => (
-                            <SelectItem key={card.id} value={card.id}>
-                              {card.cardName} ({card.interestRate}%/bln)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
+                 <FormField
                   control={form.control}
                   name="tenor"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tenor (Bulan)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Pilih tenor" />
@@ -143,8 +126,47 @@ export default function InstallmentHelperPage() {
                   )}
                 />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FormField
+                  control={form.control}
+                  name="cardId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pilih Kartu (Opsional)</FormLabel>
+                      <Select onValueChange={handleCardChange} value={field.value || ''} disabled={cards.length === 0}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={cards.length > 0 ? "Pilih kartu untuk isi bunga otomatis" : "Tidak ada kartu"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {cards.map(card => (
+                            <SelectItem key={card.id} value={card.id}>
+                              {card.cardName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="interestRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Suku Bunga (% per bulan)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="1.75" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <div className="flex justify-end">
-                <Button type="submit" disabled={isSubmitting || cards.length === 0}>
+                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
