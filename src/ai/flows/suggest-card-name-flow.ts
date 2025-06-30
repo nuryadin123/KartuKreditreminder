@@ -26,14 +26,14 @@ const prompt = ai.definePrompt({
     name: 'suggestCardNamePrompt',
     input: { schema: SuggestCardNameInputSchema },
     output: { schema: SuggestCardNameOutputSchema },
-    prompt: `You are a helpful assistant for a financial application. Your task is to suggest names of credit cards issued by a specific bank in Indonesia, based on the user's query.
+    prompt: `You are a helpful assistant for a financial application. Your task is to suggest names of credit cards issued by a specific bank in Indonesia, based on the user's query. Also include co-branded cards if available (e.g., cards co-branded with e-commerce platforms like Tokopedia, Shopee, or airlines).
 
 Bank Name: "{{{bankName}}}"
 User Query: "{{{query}}}"
 
-Provide up to 5 relevant credit card names for the given bank. If the query is empty, suggest popular credit cards from that bank. If the bank name is not recognized or is empty, provide general popular card names from various Indonesian banks.
+Provide up to 5 relevant credit card names for the given bank. If the query is empty, suggest popular credit cards from that bank, including co-branded options. If the bank name is not recognized or is empty, provide general popular card names from various Indonesian banks.
 
-Return the result as a JSON object with a "suggestions" key, which is an array of strings. For example for bank "Bank Central Asia": { "suggestions": ["BCA Card Platinum", "BCA Everyday Card"] }.`,
+Return the result as a JSON object with a "suggestions" key, which is an array of strings. For example for bank "Bank Rakyat Indonesia (BRI)": { "suggestions": ["BRI Wonderful Indonesia", "BRI Touch", "BRI Tokopedia Card"] }.`,
 });
 
 
