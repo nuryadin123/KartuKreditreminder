@@ -1,0 +1,88 @@
+import type { CreditCard, Transaction } from "@/types";
+
+export const mockCards: CreditCard[] = [
+  {
+    id: "card-1",
+    bankName: "Bank Pusat Asia",
+    cardName: "BPA Platinum",
+    creditLimit: 50000000,
+    dueDate: 25,
+    interestRate: 2.5,
+    last4Digits: "1234",
+  },
+  {
+    id: "card-2",
+    bankName: "Bank Mandiri",
+    cardName: "Mandiri Gold",
+    creditLimit: 25000000,
+    dueDate: 15,
+    interestRate: 2.75,
+    last4Digits: "5678",
+  },
+  {
+    id: "card-3",
+    bankName: "Bank Digital",
+    cardName: "DigitalFirst",
+    creditLimit: 75000000,
+    dueDate: 5,
+    interestRate: 1.9,
+    last4Digits: "9012",
+  },
+];
+
+export const mockTransactions: Transaction[] = [
+  {
+    id: "txn-1",
+    cardId: "card-1",
+    date: "2024-07-15T10:30:00Z",
+    description: "Makan siang di Resto Enak",
+    amount: 150000,
+    category: "Makanan",
+    status: "belum lunas",
+  },
+  {
+    id: "txn-2",
+    cardId: "card-2",
+    date: "2024-07-14T18:00:00Z",
+    description: "Tiket bioskop film baru",
+    amount: 100000,
+    category: "Hiburan",
+    status: "belum lunas",
+  },
+  {
+    id: "txn-3",
+    cardId: "card-1",
+    date: "2024-07-12T09:00:00Z",
+    description: "Belanja bulanan di Supermarket Jaya",
+    amount: 1250000,
+    category: "Belanja",
+    status: "belum lunas",
+  },
+  {
+    id: "txn-4",
+    cardId: "card-3",
+    date: "2024-07-10T14:20:00Z",
+    description: "Langganan layanan streaming",
+    amount: 75000,
+    category: "Hiburan",
+    status: "lunas",
+  },
+  {
+    id: "txn-5",
+    cardId: "card-2",
+    date: "2024-07-08T08:15:00Z",
+    description: "Transportasi online ke kantor",
+    amount: 55000,
+    category: "Transportasi",
+    status: "belum lunas",
+  },
+    {
+    id: "txn-6",
+    cardId: "card-3",
+    date: "2024-07-20T19:00:00Z",
+    description: "Pembelian gadget baru",
+    amount: 5500000,
+    category: "Belanja",
+    status: "belum lunas",
+  },
+];

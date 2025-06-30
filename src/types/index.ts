@@ -1,0 +1,19 @@
+export interface CreditCard {
+  id: string;
+  bankName: string;
+  cardName: string;
+  creditLimit: number;
+  dueDate: number; // day of month
+  interestRate: number;
+  last4Digits: string;
+}
+
+export interface Transaction {
+  id: string;
+  cardId: string;
+  date: string; // ISO date string
+  description: string;
+  amount: number;
+  category: 'Belanja' | 'Makanan' | 'Transportasi' | 'Hiburan' | 'Lainnya';
+  status: 'lunas' | 'belum lunas';
+}
