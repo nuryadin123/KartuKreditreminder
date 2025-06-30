@@ -15,14 +15,19 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     if (isClient) {
       try {
         const item = window.localStorage.getItem(key);
-        // Set initial value from local storage if it exists
+        // Set state from local storage if it exists, otherwise use initialValue.
+        // This is only done once when the component mounts on the client.
         setStoredValue(item ? JSON.parse(item) : initialValue);
       } catch (error) {
         console.log(error);
         setStoredValue(initialValue);
       }
     }
-  }, [isClient, key, initialValue]);
+    // We intentionally omit `initialValue` from the dependency array.
+    // It's only meant to be used on the first client-side check, and including it
+    // can cause an infinite loop if a new array/object reference is passed on each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, key]);
 
   const setValue = (value: T | ((val: T) => T)) => {
     if (!isClient) {
