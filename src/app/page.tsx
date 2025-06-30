@@ -2,6 +2,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Button } from "@/components/ui/button";
+import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { CreditCard, DollarSign, Calendar, Loader2, Bell, Wallet } from "lucide-react";
@@ -21,6 +25,9 @@ export default function Home() {
   const { toast } = useToast();
   const [notificationsShown, setNotificationsShown] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedCardForPayment, setSelectedCardForPayment] = useState<CreditCardType | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && "Notification" in window) {
@@ -148,6 +155,33 @@ export default function Home() {
     setNotificationsShown(true);
   }, [cards, chartData, loadingCards, loadingTransactions, notificationsShown, toast, notificationPermission]);
 
+  const handleOpenPaymentDialog = (card: CreditCardType) => {
+    setSelectedCardForPayment(card);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handlePayment = async ({ amount }: { amount: number }) => {
+    if (selectedCardForPayment && user) {
+      const newPayment: Omit<Transaction, 'id'> = {
+        userId: user.uid,
+        cardId: selectedCardForPayment.id,
+        date: new Date().toISOString(),
+        description: `Pembayaran Kartu Kredit`,
+        amount: amount,
+        category: 'Pembayaran',
+        status: 'lunas',
+      };
+      try {
+        await addDoc(collection(db, 'transactions'), newPayment);
+        toast({ title: "Pembayaran Berhasil", description: `Pembayaran sebesar ${formatCurrency(amount)} telah dicatat.` });
+      } catch (error) {
+        toast({ title: "Gagal Membayar", description: "Terjadi kesalahan saat mencatat pembayaran.", variant: "destructive" });
+      }
+      setIsPaymentDialogOpen(false);
+      setSelectedCardForPayment(null);
+    }
+  };
+
   const isLoading = loadingCards || loadingTransactions;
   
   const filteredChartData = useMemo(() => {
@@ -156,109 +190,121 @@ export default function Home() {
 
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dasbor</h1>
-        <p className="text-muted-foreground">Ringkasan utang dan kartu kredit Anda.</p>
-      </div>
-
-      {isLoading ? (
-         <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin" />
+    <>
+      <div className="flex flex-col gap-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dasbor</h1>
+          <p className="text-muted-foreground">Ringkasan utang dan kartu kredit Anda.</p>
         </div>
-      ) : (
-        <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Utang</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(totalDebt)}</div>
-                    <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
-                </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Sisa Limit</CardTitle>
-                        <Wallet className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(totalRemainingLimit)}</div>
-                        <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Kartu Aktif</CardTitle>
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{cards.length}</div>
-                    <p className="text-xs text-muted-foreground">Total kartu kredit terdaftar</p>
-                </CardContent>
-                </Card>
-                <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pembayaran Berikutnya</CardTitle>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">
-                    {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'N/A'}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                    Tanggal jatuh tempo terdekat
-                    </p>
-                </CardContent>
-                </Card>
-            </div>
 
-            <Card>
-              <CardHeader>
-                  <CardTitle>Pengingat Pembayaran Mendatang</CardTitle>
-                  <CardDescription>Tagihan yang akan jatuh tempo dalam 7 hari ke depan.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                  {upcomingPayments.length > 0 ? (
-                      upcomingPayments.map(({ card, debt, dueDate }) => (
-                          <Alert key={card.id}>
-                              <Bell className="h-4 w-4" />
-                              <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
-                              <AlertDescription>
-                                  <div className="flex justify-between items-center">
-                                      <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
-                                      <span className="font-semibold">{formatCurrency(debt)}</span>
-                                  </div>
-                              </AlertDescription>
-                          </Alert>
-                      ))
-                  ) : (
-                      <p className="text-sm text-muted-foreground">Tidak ada tagihan yang akan jatuh tempo dalam waktu dekat.</p>
-                  )}
-              </CardContent>
-            </Card>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Utang</CardTitle>
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                      <div className="text-2xl font-bold">{formatCurrency(totalDebt)}</div>
+                      <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
+                  </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Total Sisa Limit</CardTitle>
+                          <Wallet className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                          <div className="text-2xl font-bold">{formatCurrency(totalRemainingLimit)}</div>
+                          <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Kartu Aktif</CardTitle>
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                      <div className="text-2xl font-bold">{cards.length}</div>
+                      <p className="text-xs text-muted-foreground">Total kartu kredit terdaftar</p>
+                  </CardContent>
+                  </Card>
+                  <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Pembayaran Berikutnya</CardTitle>
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                      <div className="text-2xl font-bold">
+                      {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'N/A'}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                      Tanggal jatuh tempo terdekat
+                      </p>
+                  </CardContent>
+                  </Card>
+              </div>
 
-            <Card>
+              <Card>
                 <CardHeader>
-                    <CardTitle>Distribusi Utang</CardTitle>
-                    <CardDescription>Visualisasi total utang per kartu kredit.</CardDescription>
+                    <CardTitle>Pengingat Pembayaran Mendatang</CardTitle>
+                    <CardDescription>Tagihan yang akan jatuh tempo dalam 7 hari ke depan.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    {filteredChartData.length > 0 ? (
-                        <div className="relative">
-                            <DebtChart data={filteredChartData} />
-                        </div>
+                <CardContent className="space-y-4">
+                    {upcomingPayments.length > 0 ? (
+                        upcomingPayments.map(({ card, debt, dueDate }) => (
+                            <Alert key={card.id}>
+                                <Bell className="h-4 w-4" />
+                                <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
+                                <AlertDescription>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
+                                            <span className="font-semibold block sm:inline sm:ml-4">{formatCurrency(debt)}</span>
+                                        </div>
+                                        <Button size="sm" onClick={() => handleOpenPaymentDialog(card)}>Bayar</Button>
+                                    </div>
+                                </AlertDescription>
+                            </Alert>
+                        ))
                     ) : (
-                        <div className="flex h-64 items-center justify-center">
-                            <p className="text-muted-foreground">Tidak ada data utang untuk ditampilkan.</p>
-                        </div>
+                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang akan jatuh tempo dalam waktu dekat.</p>
                     )}
                 </CardContent>
-            </Card>
-        </>
-      )}
-    </div>
+              </Card>
+
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Distribusi Utang</CardTitle>
+                      <CardDescription>Visualisasi total utang per kartu kredit.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      {filteredChartData.length > 0 ? (
+                          <div className="relative">
+                              <DebtChart data={filteredChartData} />
+                          </div>
+                      ) : (
+                          <div className="flex h-64 items-center justify-center">
+                              <p className="text-muted-foreground">Tidak ada data utang untuk ditampilkan.</p>
+                          </div>
+                      )}
+                  </CardContent>
+              </Card>
+          </>
+        )}
+      </div>
+      <PaymentDialog
+        card={selectedCardForPayment}
+        transactions={transactions}
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
+        onSubmit={handlePayment}
+      />
+    </>
   );
 }
