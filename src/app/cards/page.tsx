@@ -61,11 +61,28 @@ const initialCards: Omit<CreditCard, 'id' | 'userId'>[] = [
   { bankName: 'Kredivo', cardName: 'Kredivo Nur', last4Digits: '7777', creditLimit: 50000000, billingDate: 15, dueDate: 25, interestRate: 21 },
   { bankName: 'Honest', cardName: 'Honest Card', last4Digits: '8888', creditLimit: 51000000, billingDate: 15, dueDate: 25, interestRate: 21 },
   { bankName: 'UOB', cardName: 'UOB Nur Card', last4Digits: '9999', creditLimit: 10000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'BTN', cardName: 'BTN Ali Card', last4Digits: '8409', creditLimit: 60000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'Tokopedia', cardName: 'Toped Ali Card', last4Digits: '8201', creditLimit: 49000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'Ovo', cardName: 'Ovo Ali Card', last4Digits: '1001', creditLimit: 23700000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'Samsung', cardName: 'Samsung Ali Card', last4Digits: '1002', creditLimit: 35000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'Paper', cardName: 'Paper Ali Card', last4Digits: '1003', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'Nex', cardName: 'Nex Ali Card', last4Digits: '1004', creditLimit: 20000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'BCA', cardName: 'BCA Ali Card', last4Digits: '1005', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'BNI', cardName: 'BNI Batik Ali Card', last4Digits: '1006', creditLimit: 28000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'BNI', cardName: 'BNI Word Ali Card', last4Digits: '1007', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'BNI', cardName: 'BNI Titanium Ali Card', last4Digits: '1008', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'Mandiri', cardName: 'Mandiri Ali Card', last4Digits: '1009', creditLimit: 40000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'PCS', cardName: 'PCS Ali Card', last4Digits: '1010', creditLimit: 10000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'CIMB Niaga', cardName: 'CIMB Accor Ali Card', last4Digits: '1011', creditLimit: 20000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'Line', cardName: 'Line Ali Card', last4Digits: '1012', creditLimit: 105000000, billingDate: 15, dueDate: 25, interestRate: 21 },
+  { bankName: 'UOB', cardName: 'UOB Ali Card', last4Digits: '1013', creditLimit: 10000000, billingDate: 15, dueDate: 25, interestRate: 21 },
 ];
 
 const initialUsages: (number | null)[] = [
   27699994, 937846, 47088763, 18556750, 35736663, 132000000, 50984923, 29920003,
-  10004074, 100113716, 41391666, 40000000, 14975999, 11000000, null, null, null, null
+  10004074, 100113716, 41391666, 40000000, 14975999, 11000000, null, null, null, null,
+  24215862, 39737899, 7868906, 21227557, 14109333, 2582782, 18318736, 23438334,
+  25755006, 23348340, 40213519, 3798793, 19984331, 105000000, null,
 ];
 // --- End Seed Data ---
 
