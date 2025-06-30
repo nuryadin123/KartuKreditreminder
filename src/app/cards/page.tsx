@@ -61,7 +61,7 @@ export default function CardsPage() {
             .filter(t => t.cardId === card.id && t.category === 'Pembayaran')
             .reduce((sum, t) => sum + t.amount, 0);
         const debt = cardSpending - cardPayments;
-        debts.set(card.id, debt > 0 ? debt : 0);
+        debts.set(card.id, debt);
     });
     return debts;
   }, [cards, transactions]);
@@ -156,7 +156,7 @@ export default function CardsPage() {
           {cards.map(card => {
             const debt = cardDebts.get(card.id) || 0;
             const availableCredit = card.creditLimit - debt;
-            const debtPercentage = card.creditLimit > 0 ? (debt / card.creditLimit) * 100 : 0;
+            const debtPercentage = card.creditLimit > 0 ? ((debt > 0 ? debt : 0) / card.creditLimit) * 100 : 0;
             
             return (
             <Card key={card.id} className="flex flex-col">
@@ -196,7 +196,11 @@ export default function CardsPage() {
                 <div className="space-y-2">
                     <div className="flex justify-between items-baseline">
                         <span className="text-sm text-muted-foreground">Sisa Utang</span>
-                        <span className="font-semibold text-destructive">{formatCurrency(debt)}</span>
+                        {debt >= 0 ? (
+                            <span className="font-semibold text-destructive">{formatCurrency(debt)}</span>
+                        ) : (
+                            <span className="font-semibold text-green-600">Surplus {formatCurrency(Math.abs(debt))}</span>
+                        )}
                     </div>
                     <Progress value={debtPercentage} aria-label={`${debtPercentage.toFixed(2)}% used`} />
                     <div className="flex justify-between items-baseline text-sm text-muted-foreground">
