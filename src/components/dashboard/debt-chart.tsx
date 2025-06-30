@@ -40,7 +40,6 @@ export function DebtChart({ data }: DebtChartProps) {
                 left: 20,
                 bottom: 5,
             }}
-            barSize={40}
         >
             <CartesianGrid vertical={false} />
             <XAxis

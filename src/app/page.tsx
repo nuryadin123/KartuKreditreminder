@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -196,15 +195,6 @@ export default function Home() {
             </div>
 
             <Card>
-                <CardHeader>
-                <CardTitle>Distribusi Utang</CardTitle>
-                </CardHeader>
-                <CardContent>
-                <DebtChart data={chartData} />
-                </CardContent>
-            </Card>
-
-            <Card>
               <CardHeader>
                   <CardTitle>Pengingat Pembayaran Mendatang</CardTitle>
                   <CardDescription>Tagihan yang akan jatuh tempo dalam 7 hari ke depan.</CardDescription>
@@ -227,6 +217,22 @@ export default function Home() {
                       <p className="text-sm text-muted-foreground">Tidak ada tagihan yang akan jatuh tempo dalam waktu dekat.</p>
                   )}
               </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Distribusi Utang</CardTitle>
+                    <CardDescription>Visualisasi total utang per kartu kredit.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {chartData.filter(d => d['Total Utang'] > 0).length > 0 ? (
+                        <DebtChart data={chartData} />
+                    ) : (
+                        <div className="flex h-80 items-center justify-center">
+                            <p className="text-muted-foreground">Tidak ada data utang untuk ditampilkan.</p>
+                        </div>
+                    )}
+                </CardContent>
             </Card>
         </>
       )}
