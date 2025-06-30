@@ -17,8 +17,6 @@ interface DebtChartProps {
   data: { name: string; "Total Utang": number }[];
 }
 
-// These HSL values correspond to the chart colors in globals.css
-// Using them directly ensures consistency with the app's theme.
 const COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
@@ -27,18 +25,22 @@ const COLORS = [
   "hsl(var(--chart-5))",
 ];
 
+// Sanitize the name for use as a CSS variable key
+const sanitizeName = (name: string) => name.replace(/[^a-zA-Z0-9]/g, '_');
+
 export function DebtChart({ data }: DebtChartProps) {
-  const chartConfig = React.useMemo(() => {
+  const { chartData, chartConfig } = React.useMemo(() => {
     const config: ChartConfig = {};
-    data.forEach((item, index) => {
-      config[item.name] = {
+    const processedData = data.map((item, index) => {
+      const sanitized = sanitizeName(item.name);
+      config[sanitized] = {
         label: item.name,
         color: COLORS[index % COLORS.length],
       };
+      return { ...item, key: sanitized };
     });
-    return config;
+    return { chartData: processedData, chartConfig: config };
   }, [data]);
-
 
   return (
     <div className="h-72 w-full"> 
@@ -50,23 +52,27 @@ export function DebtChart({ data }: DebtChartProps) {
           <ChartTooltip
             cursor={false}
             content={<ChartTooltipContent
-                nameKey="name"
+                nameKey="name" // The display name is still 'name'
                 formatter={(value) => formatCurrency(Number(value))}
             />}
           />
           <Pie
-            data={data}
+            data={chartData} // Use processed data
             dataKey="Total Utang"
             nameKey="name"
             innerRadius="60%"
             strokeWidth={2}
           >
-            {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color} className="focus:outline-none" />
+            {chartData.map((entry) => (
+                <Cell 
+                  key={`cell-${entry.key}`} 
+                  fill={`var(--color-${entry.key})`}
+                  className="focus:outline-none" 
+                  />
             ))}
           </Pie>
            <ChartLegend
-            content={<ChartLegendContent nameKey="name" />}
+            content={<ChartLegendContent nameKey="key" />}
             className="-translate-y-2 flex-wrap justify-center"
           />
         </PieChart>
