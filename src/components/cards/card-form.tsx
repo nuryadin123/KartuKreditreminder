@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import type { CreditCard } from "@/types";
+import { useState, useEffect } from "react";
+import { suggestBankName } from "@/ai/flows/suggest-bank-name-flow";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 
@@ -63,6 +65,43 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
 
   const reminderType = form.watch("limitIncreaseReminder");
 
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isSuggestionPopoverOpen, setIsSuggestionPopoverOpen] = useState(false);
+  const watchedBankName = form.watch("bankName");
+
+  useEffect(() => {
+    const isDirty = form.getFieldState('bankName').isDirty;
+    if ((!isDirty && !defaultValues?.bankName) || !watchedBankName || watchedBankName.length < 2) {
+        setSuggestions([]);
+        return;
+    }
+    
+    const handler = setTimeout(async () => {
+        setIsSuggesting(true);
+        try {
+            const result = await suggestBankName({ query: watchedBankName });
+            setSuggestions(result.suggestions);
+        } catch (error) {
+            console.error("Error fetching bank suggestions:", error);
+            setSuggestions([]);
+        } finally {
+            setIsSuggesting(false);
+        }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [watchedBankName, form, defaultValues?.bankName]);
+
+  useEffect(() => {
+    if (suggestions.length > 0 && !isSuggesting) {
+      setIsSuggestionPopoverOpen(true);
+    } else {
+      setIsSuggestionPopoverOpen(false);
+    }
+  }, [suggestions, isSuggesting]);
+
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -73,9 +112,34 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Nama Bank</FormLabel>
-                <FormControl>
-                  <Input placeholder="Contoh: Bank Pusat Asia" {...field} />
-                </FormControl>
+                <Popover open={isSuggestionPopoverOpen} onOpenChange={setIsSuggestionPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <FormControl>
+                        <div className="relative">
+                            <Input
+                                placeholder="Ketik untuk mendapat saran AI"
+                                {...field}
+                                autoComplete="off"
+                            />
+                             {isSuggesting && <Loader2 className="animate-spin absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />}
+                        </div>
+                        </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1">
+                        {suggestions.map((suggestion, index) => (
+                        <div
+                            key={index}
+                            className="p-2 rounded-sm hover:bg-accent cursor-pointer text-sm"
+                            onClick={() => {
+                                form.setValue("bankName", suggestion, { shouldValidate: true, shouldDirty: true });
+                                setSuggestions([]); 
+                            }}
+                        >
+                            {suggestion}
+                        </div>
+                        ))}
+                    </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}
