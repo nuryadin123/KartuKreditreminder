@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -33,7 +32,7 @@ import {
 import { formatCurrency, cn } from "@/lib/utils";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2, CheckCircle2, CircleSlash } from "lucide-react";
 import type { Transaction, CreditCard } from "@/types";
-import { TransactionForm } from "@/components/transactions/transaction-form";
+import { TransactionForm, type TransactionFormValues } from "@/components/transactions/transaction-form";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
@@ -97,7 +96,7 @@ export default function TransactionsPage() {
     setIsDeleteAlertOpen(false);
   };
 
-  const handleSubmit = async (values: Omit<Transaction, "id" | "userId" | "status" | "installmentDetails"> & {date: Date}) => {
+  const handleSubmit = async (values: TransactionFormValues) => {
     if (!user) {
         toast({ title: "Gagal", description: "Anda harus masuk untuk menyimpan transaksi.", variant: "destructive" });
         return;
@@ -107,7 +106,7 @@ export default function TransactionsPage() {
         ...values,
         userId: user.uid,
         date: values.date.toISOString(),
-    }
+    };
     try {
         if (selectedTransaction) {
             const transactionRef = doc(db, 'transactions', selectedTransaction.id);

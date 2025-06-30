@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -33,7 +32,7 @@ const formSchema = z.object({
   }),
 });
 
-type TransactionFormValues = z.infer<typeof formSchema>;
+export type TransactionFormValues = z.infer<typeof formSchema>;
 
 interface TransactionFormProps {
   onSubmit: (values: TransactionFormValues) => void;
