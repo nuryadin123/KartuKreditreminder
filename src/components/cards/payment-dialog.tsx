@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah pembayaran harus lebih dari 0."),
@@ -49,11 +50,38 @@ export function PaymentDialog({ card, transactions, open, onOpenChange, onSubmit
     },
   });
 
-  const hasActiveInstallments = useMemo(() => {
-    if (!card || !transactions) return false;
-    return transactions.some(
+  const { totalMonthlyInstallment } = useMemo(() => {
+    if (!card || !transactions) return { totalMonthlyInstallment: 0 };
+    
+    const activeInstallments = transactions.filter(
       (t) => t.cardId === card.id && t.description.startsWith("Cicilan:") && t.status === 'belum lunas'
     );
+
+    if (activeInstallments.length === 0) {
+        return { totalMonthlyInstallment: 0 };
+    }
+
+    const total = activeInstallments.reduce((acc, t) => {
+        const principal = t.amount;
+        const tenorMatch = t.description.match(/selama (\d+) bulan/);
+        
+        if (!tenorMatch || !card.interestRate) {
+            return acc;
+        }
+
+        const tenor = parseInt(tenorMatch[1], 10);
+        // Card stores monthly interest rate, but flat calculation uses annual.
+        const annualInterestRate = card.interestRate * 12;
+
+        // Re-calculate monthly flat installment based on the original transaction
+        const totalInterest = principal * (annualInterestRate / 100) * (tenor / 12);
+        const totalPayment = principal + totalInterest;
+        const monthlyInstallment = totalPayment / tenor;
+        
+        return acc + monthlyInstallment;
+    }, 0);
+
+    return { totalMonthlyInstallment: total };
   }, [card, transactions]);
 
   const handleSubmit = (values: PaymentFormValues) => {
@@ -81,12 +109,14 @@ export function PaymentDialog({ card, transactions, open, onOpenChange, onSubmit
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            {hasActiveInstallments && (
+            {totalMonthlyInstallment > 0 && (
                 <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Pengingat Cicilan</AlertTitle>
+                    <AlertTitle>Pengingat Cicilan Aktif</AlertTitle>
                     <AlertDescription>
-                        Kartu ini memiliki cicilan aktif. Pastikan pembayaran Anda sudah mencakup tagihan reguler dan cicilan bulanan.
+                        Kartu ini memiliki total cicilan bulanan sebesar{" "}
+                        <strong>{formatCurrency(totalMonthlyInstallment)}</strong>. 
+                        Pastikan pembayaran Anda sudah mencakup jumlah ini beserta tagihan lainnya.
                     </AlertDescription>
                 </Alert>
             )}
