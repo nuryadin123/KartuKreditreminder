@@ -22,7 +22,7 @@ const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
   cardId: z.string().optional(),
   interestRate: z.coerce.number({ required_error: "Suku bunga harus diisi." }).min(0, "Suku bunga tidak boleh negatif."),
-  tenor: z.string({ required_error: "Tenor harus diisi." }).min(1, "Tenor harus diisi."),
+  tenor: z.string({ required_error: "Tenor harus diisi." }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,7 +47,7 @@ export default function InstallmentHelperPage() {
     form.setValue("cardId", cardId, { shouldValidate: true });
     const selectedCard = cards.find(c => c.id === cardId);
     if (selectedCard) {
-      form.setValue("interestRate", selectedCard.interestRate, { shouldValidate: true });
+      form.setValue("interestRate", selectedCard.interestRate * 12, { shouldValidate: true });
     }
   };
 
@@ -109,7 +109,7 @@ export default function InstallmentHelperPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tenor (Bulan)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Pilih tenor" />
@@ -133,7 +133,7 @@ export default function InstallmentHelperPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Pilih Kartu (Opsional)</FormLabel>
-                      <Select onValueChange={handleCardChange} value={field.value || ''} disabled={cards.length === 0}>
+                      <Select onValueChange={handleCardChange} value={field.value} disabled={cards.length === 0}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={cards.length > 0 ? "Pilih kartu untuk isi bunga otomatis" : "Tidak ada kartu"} />
@@ -156,9 +156,9 @@ export default function InstallmentHelperPage() {
                   name="interestRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Suku Bunga (% per bulan)</FormLabel>
+                      <FormLabel>Suku Bunga (% per tahun)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="1.75" {...field} value={field.value || ''} />
+                        <Input type="number" step="0.01" placeholder="21" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

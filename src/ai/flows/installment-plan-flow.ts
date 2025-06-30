@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 const InstallmentPlanInputSchema = z.object({
   transactionAmount: z.number().describe('The total amount of the transaction to be converted into installments.'),
-  interestRate: z.number().describe('The monthly interest rate of the credit card (as a percentage, e.g., 1.75 for 1.75%).'),
+  interestRate: z.number().describe('The annual interest rate of the credit card (as a percentage, e.g., 21 for 21%).'),
   tenor: z.number().int().min(1).describe('The desired number of months for the installment plan (tenor).'),
   bankName: z.string().optional().describe('The name of the bank for providing contextual advice on the interest rate.'),
 });
@@ -43,17 +43,17 @@ const prompt = ai.definePrompt({
 
 Transaction Details:
 - Amount: {{{transactionAmount}}} IDR
-- Monthly Interest Rate: {{{interestRate}}}%
+- Annual Interest Rate: {{{interestRate}}}%
 - Tenor: {{{tenor}}} months
 {{#if bankName}}- Bank: {{{bankName}}}{{/if}}
 
 Your tasks are:
-1.  **Calculate the fixed monthly installment amount.** Use the standard formula for an annuity loan. The formula is: M = P * (i * (1 + i)^n) / ((1 + i)^n - 1), where P is the principal, i is the monthly interest rate in decimal form (e.g., 1.75% becomes 0.0175), and n is the tenor. Round the result to the nearest whole number.
+1.  **Calculate the fixed monthly installment amount.** First, convert the annual interest rate to a monthly interest rate by dividing by 12. Then, use the standard formula for an annuity loan: M = P * (i * (1 + i)^n) / ((1 + i)^n - 1), where P is the principal, i is the *monthly* interest rate in decimal form (e.g., an annual rate of 21% becomes a monthly rate of 1.75%, which is 0.0175 in decimal), and n is the tenor. Round the result to the nearest whole number.
 2.  **Calculate the total payment and total interest.** Total Payment = Monthly Installment * Tenor. Total Interest = Total Payment - Principal.
-3.  **Generate a month-by-month amortization schedule.** For each month, show the principal payment, interest payment, and the remaining balance. The interest for a month is calculated on the remaining balance from the previous month. The principal payment is the monthly installment minus the interest payment.
+3.  **Generate a month-by-month amortization schedule.** For each month, show the principal payment, interest payment, and the remaining balance. The interest for a month is calculated on the remaining balance from the previous month using the *monthly* interest rate. The principal payment is the monthly installment minus the interest payment.
 4.  **Provide a brief, insightful piece of financial advice** based on the calculation. The advice must be in Indonesian and easy to understand.
     {{#if bankName}}
-    - Critically evaluate the provided interest rate ({{{interestRate}}}%). Compare it to typical credit card interest rates for {{bankName}} in Indonesia (usually between 1.75% and 2.95% per month). State whether the user's rate is competitive, average, or high. For example: "Suku bunga {{interestRate}}% termasuk kompetitif untuk bank {{bankName}}."
+    - Critically evaluate the provided annual interest rate ({{{interestRate}}}%). Compare it to typical credit card annual interest rates for {{bankName}} in Indonesia (usually between 21% and 35.4% per year). State whether the user's rate is competitive, average, or high. For example: "Suku bunga tahunan {{interestRate}}% termasuk kompetitif untuk bank {{bankName}}."
     {{else}}
     - Comment on the total interest paid relative to the principal amount.
     {{/if}}
