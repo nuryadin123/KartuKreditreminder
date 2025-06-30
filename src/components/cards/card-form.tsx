@@ -22,6 +22,7 @@ const formSchema = z.object({
   cardName: z.string().min(2, "Nama kartu minimal 2 karakter."),
   last4Digits: z.string().length(4, "Harus tepat 4 digit.").regex(/^\d{4}$/, "Harus berupa 4 digit angka."),
   creditLimit: z.coerce.number().min(0, "Limit kredit harus angka positif."),
+  billingDate: z.coerce.number().min(1, "Tanggal cetak tagihan harus antara 1 dan 31.").max(31),
   dueDate: z.coerce.number().min(1, "Tanggal jatuh tempo harus antara 1 dan 31.").max(31),
   interestRate: z.coerce.number().min(0, "Suku bunga harus angka positif."),
 });
@@ -43,8 +44,9 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
       cardName: defaultValues?.cardName || "",
       last4Digits: defaultValues?.last4Digits || "",
       creditLimit: defaultValues?.creditLimit || 0,
+      billingDate: defaultValues?.billingDate || 1,
       dueDate: defaultValues?.dueDate || 1,
-      interestRate: defaultValues?.interestRate || 0,
+      interestRate: defaultValues?.interestRate || 1.75,
     },
   });
 
@@ -108,6 +110,19 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
+            name="billingDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tanggal Cetak Tagihan</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="1" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
             name="dueDate"
             render={({ field }) => (
               <FormItem>
@@ -119,20 +134,20 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
               </FormItem>
             )}
           />
-          <FormField
+        </div>
+        <FormField
             control={form.control}
             name="interestRate"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Suku Bunga (% per bulan)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="2.5" {...field} />
+                  <Input type="number" step="0.01" placeholder="1.75" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
         <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                 Batal

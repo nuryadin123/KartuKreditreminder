@@ -3,6 +3,7 @@ export interface CreditCard {
   bankName: string;
   cardName: string;
   creditLimit: number;
+  billingDate: number; // day of month
   dueDate: number; // day of month
   interestRate: number;
   last4Digits: string;

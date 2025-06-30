@@ -209,6 +209,10 @@ export default function CardsPage() {
                     </div>
                 </div>
                 <div className="flex justify-between items-baseline">
+                  <span className="text-sm text-muted-foreground">Tgl. Cetak Tagihan</span>
+                  <span className="font-semibold">Tanggal {card.billingDate}</span>
+                </div>
+                <div className="flex justify-between items-baseline">
                   <span className="text-sm text-muted-foreground">Jatuh Tempo</span>
                   <span className="font-semibold">Tanggal {card.dueDate}</span>
                 </div>
