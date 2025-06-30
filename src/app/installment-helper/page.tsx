@@ -90,7 +90,7 @@ export default function InstallmentHelperPage() {
                     <FormItem>
                       <FormLabel>Jumlah Transaksi (IDR)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="5000000" {...field} />
+                        <Input type="number" placeholder="5000000" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
