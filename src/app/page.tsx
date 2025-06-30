@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { CreditCard, DollarSign, Calendar, Loader2, Bell } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, Loader2, Bell, Wallet } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
 import type { CreditCard as CreditCardType, Transaction } from "@/types";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
@@ -53,8 +53,8 @@ export default function Home() {
     setUpcomingDueDate(nextDueDate || null);
   }, [cards, loadingCards]);
 
-  const { totalDebt, chartData } = useMemo(() => {
-    if (loadingCards || loadingTransactions) return { totalDebt: 0, chartData: [] };
+  const { totalDebt, totalRemainingLimit, chartData } = useMemo(() => {
+    if (loadingCards || loadingTransactions) return { totalDebt: 0, totalRemainingLimit: 0, chartData: [] };
     
     const spending = transactions
         .filter(t => t.category !== 'Pembayaran')
@@ -65,6 +65,9 @@ export default function Home() {
         .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
     const totalDebt = spending - payments;
+
+    const totalCreditLimit = cards.reduce((sum, card) => sum + Number(card.creditLimit || 0), 0);
+    const totalRemainingLimit = totalCreditLimit - totalDebt;
 
     const chartData = cards.map(card => {
         const cardSpending = transactions
@@ -77,7 +80,7 @@ export default function Home() {
         return { name: card.cardName, "Total Utang": debt > 0 ? debt : 0 };
     });
 
-    return { totalDebt, chartData };
+    return { totalDebt, totalRemainingLimit, chartData };
   }, [cards, transactions, loadingCards, loadingTransactions]);
 
   const upcomingPayments = useMemo(() => {
@@ -165,7 +168,7 @@ export default function Home() {
         </div>
       ) : (
         <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Utang</CardTitle>
@@ -175,6 +178,16 @@ export default function Home() {
                     <div className="text-2xl font-bold">{formatCurrency(totalDebt)}</div>
                     <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
                 </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Sisa Limit</CardTitle>
+                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(totalRemainingLimit)}</div>
+                        <p className="text-xs text-muted-foreground">Di semua kartu kredit</p>
+                    </CardContent>
                 </Card>
                 <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
