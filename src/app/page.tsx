@@ -2,14 +2,15 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { CreditCard, DollarSign, Calendar, Loader2 } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, Loader2, Bell } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
 import type { CreditCard as CreditCardType, Transaction } from "@/types";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { useToast } from "@/hooks/use-toast";
 import { addDays, isAfter, isBefore, startOfToday, subDays } from "date-fns";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Home() {
   const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCardType>("cards");
@@ -76,6 +77,36 @@ export default function Home() {
 
     return { totalDebt, chartData };
   }, [cards, transactions, loadingCards, loadingTransactions]);
+
+  const upcomingPayments = useMemo(() => {
+    if (loadingCards || loadingTransactions) return [];
+
+    const today = startOfToday();
+    const sevenDaysFromNow = addDays(today, 7);
+    const result: { card: CreditCardType; debt: number; dueDate: Date }[] = [];
+
+    const getNextDueDate = (dueDateNumber: number) => {
+      let dueDate = new Date(today.getFullYear(), today.getMonth(), dueDateNumber);
+      if (isBefore(dueDate, today)) {
+        dueDate.setMonth(dueDate.getMonth() + 1);
+      }
+      return dueDate;
+    };
+
+    cards.forEach(card => {
+      const debtData = chartData.find(d => d.name === card.cardName);
+      const debt = debtData ? debtData["Total Utang"] : 0;
+      if (debt <= 0) return;
+
+      const nextDueDate = getNextDueDate(card.dueDate);
+
+      if (isAfter(nextDueDate, subDays(today, 1)) && isBefore(nextDueDate, sevenDaysFromNow)) {
+        result.push({ card, debt, dueDate: nextDueDate });
+      }
+    });
+
+    return result.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  }, [cards, chartData, loadingCards, loadingTransactions]);
 
   useEffect(() => {
     const isLoading = loadingCards || loadingTransactions;
@@ -171,6 +202,31 @@ export default function Home() {
                 <CardContent>
                 <DebtChart data={chartData} />
                 </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                  <CardTitle>Pengingat Pembayaran Mendatang</CardTitle>
+                  <CardDescription>Tagihan yang akan jatuh tempo dalam 7 hari ke depan.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  {upcomingPayments.length > 0 ? (
+                      upcomingPayments.map(({ card, debt, dueDate }) => (
+                          <Alert key={card.id}>
+                              <Bell className="h-4 w-4" />
+                              <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
+                              <AlertDescription>
+                                  <div className="flex justify-between items-center">
+                                      <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
+                                      <span className="font-semibold">{formatCurrency(debt)}</span>
+                                  </div>
+                              </AlertDescription>
+                          </Alert>
+                      ))
+                  ) : (
+                      <p className="text-sm text-muted-foreground">Tidak ada tagihan yang akan jatuh tempo dalam waktu dekat.</p>
+                  )}
+              </CardContent>
             </Card>
         </>
       )}
