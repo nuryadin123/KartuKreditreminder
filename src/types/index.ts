@@ -11,6 +11,11 @@ export interface CreditCard {
   lastLimitIncreaseDate?: string; // ISO date string
 }
 
+export interface InstallmentDetails {
+  monthlyInstallment: number;
+  tenor: number;
+}
+
 export interface Transaction {
   id:string;
   cardId: string;
@@ -19,4 +24,5 @@ export interface Transaction {
   amount: number;
   category: 'Belanja' | 'Makanan' | 'Transportasi' | 'Hiburan' | 'Lainnya' | 'Pembayaran';
   status: 'lunas' | 'belum lunas';
+  installmentDetails?: InstallmentDetails;
 }

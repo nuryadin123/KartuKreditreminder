@@ -54,7 +54,7 @@ export function PaymentDialog({ card, transactions, open, onOpenChange, onSubmit
     if (!card || !transactions) return { totalMonthlyInstallment: 0 };
     
     const activeInstallments = transactions.filter(
-      (t) => t.cardId === card.id && t.description.startsWith("Cicilan:") && t.status === 'belum lunas'
+      (t) => t.cardId === card.id && (t.installmentDetails || t.description.startsWith("Cicilan:")) && t.status === 'belum lunas'
     );
 
     if (activeInstallments.length === 0) {
@@ -62,6 +62,11 @@ export function PaymentDialog({ card, transactions, open, onOpenChange, onSubmit
     }
 
     const total = activeInstallments.reduce((acc, t) => {
+        if (t.installmentDetails) {
+            return acc + t.installmentDetails.monthlyInstallment;
+        }
+
+        // Fallback for old data without installmentDetails
         const principal = t.amount;
         const tenorMatch = t.description.match(/selama (\d+) bulan/);
         
@@ -70,10 +75,8 @@ export function PaymentDialog({ card, transactions, open, onOpenChange, onSubmit
         }
 
         const tenor = parseInt(tenorMatch[1], 10);
-        // Card now stores annual interest rate.
         const annualInterestRate = card.interestRate;
 
-        // Re-calculate monthly flat installment based on the original transaction
         const totalInterest = principal * (annualInterestRate / 100) * (tenor / 12);
         const totalPayment = principal + totalInterest;
         const monthlyInstallment = totalPayment / tenor;

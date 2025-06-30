@@ -98,6 +98,10 @@ export default function InstallmentHelperPage() {
       amount: formValues.transactionAmount,
       category: 'Lainnya',
       status: 'belum lunas',
+      installmentDetails: {
+        monthlyInstallment: plan.monthlyInstallment,
+        tenor: Number(formValues.tenor),
+      },
     };
 
     setTransactions(prevTransactions => [newTransaction, ...prevTransactions]);

@@ -90,7 +90,7 @@ export default function TransactionsPage() {
     setIsDeleteAlertOpen(false);
   };
 
-  const handleSubmit = (values: Omit<Transaction, "id" | "status"> & {date: Date}) => {
+  const handleSubmit = (values: Omit<Transaction, "id" | "status" | "installmentDetails"> & {date: Date}) => {
     const transactionData = {
         ...values,
         date: values.date.toISOString(),
@@ -190,7 +190,18 @@ export default function TransactionsPage() {
                         {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(transaction.date))}
                       </TableCell>
                       <TableCell>{getCardName(transaction.cardId)}</TableCell>
-                      <TableCell className="font-medium">{transaction.description}</TableCell>
+                      <TableCell className="font-medium">
+                        {transaction.installmentDetails ? (
+                          <>
+                            <span>{`Cicilan: ${formatCurrency(transaction.installmentDetails.monthlyInstallment)}/bln`}</span>
+                            <div className="text-xs text-muted-foreground">
+                                {`Dari total ${formatCurrency(transaction.amount)} (${transaction.installmentDetails.tenor} bln)`}
+                            </div>
+                          </>
+                        ) : (
+                          transaction.description
+                        )}
+                      </TableCell>
                       <TableCell>
                           <Badge variant={transaction.category === 'Pembayaran' ? 'default' : 'secondary'}>{transaction.category}</Badge>
                       </TableCell>
@@ -210,7 +221,7 @@ export default function TransactionsPage() {
                                   </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleOpenForm(transaction)} disabled={transaction.category === 'Pembayaran'}>
+                                  <DropdownMenuItem onClick={() => handleOpenForm(transaction)} disabled={transaction.category === 'Pembayaran' || !!transaction.installmentDetails}>
                                       <Edit className="mr-2 h-4 w-4"/>
                                       Edit
                                   </DropdownMenuItem>
