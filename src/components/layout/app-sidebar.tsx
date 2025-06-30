@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -12,13 +13,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, CreditCard } from "lucide-react";
+import { LayoutDashboard, Receipt, CreditCard, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
   { href: "/transactions", label: "Transaksi", icon: Receipt },
   { href: "/cards", label: "Kartu", icon: CreditCard },
+  { href: "/installment-helper", label: "Simulasi Cicilan", icon: Calculator },
 ];
 
 export function AppSidebar() {
