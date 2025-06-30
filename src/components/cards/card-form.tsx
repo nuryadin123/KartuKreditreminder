@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import type { CreditCard } from "@/types";
 import { useState, useEffect } from "react";
 import { suggestBankName } from "@/ai/flows/suggest-bank-name-flow";
+import { suggestCardName } from "@/ai/flows/suggest-card-name-flow";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -65,41 +66,75 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
 
   const reminderType = form.watch("limitIncreaseReminder");
 
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [isSuggestionPopoverOpen, setIsSuggestionPopoverOpen] = useState(false);
+  const [bankSuggestions, setBankSuggestions] = useState<string[]>([]);
+  const [isBankSuggesting, setIsBankSuggesting] = useState(false);
+  const [isBankSuggestionPopoverOpen, setIsBankSuggestionPopoverOpen] = useState(false);
   const watchedBankName = form.watch("bankName");
 
+  const [cardSuggestions, setCardSuggestions] = useState<string[]>([]);
+  const [isCardSuggesting, setIsCardSuggesting] = useState(false);
+  const [isCardSuggestionPopoverOpen, setIsCardSuggestionPopoverOpen] = useState(false);
+  const watchedCardName = form.watch("cardName");
+
   useEffect(() => {
-    const isDirty = form.getFieldState('bankName').isDirty;
-    if ((!isDirty && !defaultValues?.bankName) || !watchedBankName || watchedBankName.length < 2) {
-        setSuggestions([]);
+    if (watchedBankName.length < 2) {
+        setBankSuggestions([]);
         return;
     }
     
     const handler = setTimeout(async () => {
-        setIsSuggesting(true);
+        setIsBankSuggesting(true);
         try {
             const result = await suggestBankName({ query: watchedBankName });
-            setSuggestions(result.suggestions);
+            setBankSuggestions(result.suggestions);
         } catch (error) {
             console.error("Error fetching bank suggestions:", error);
-            setSuggestions([]);
+            setBankSuggestions([]);
         } finally {
-            setIsSuggesting(false);
+            setIsBankSuggesting(false);
         }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [watchedBankName, form, defaultValues?.bankName]);
+  }, [watchedBankName]);
 
   useEffect(() => {
-    if (suggestions.length > 0 && !isSuggesting) {
-      setIsSuggestionPopoverOpen(true);
+    if (bankSuggestions.length > 0 && !isBankSuggesting) {
+      setIsBankSuggestionPopoverOpen(true);
     } else {
-      setIsSuggestionPopoverOpen(false);
+      setIsBankSuggestionPopoverOpen(false);
     }
-  }, [suggestions, isSuggesting]);
+  }, [bankSuggestions, isBankSuggesting]);
+
+  useEffect(() => {
+    if (!watchedBankName) {
+        setCardSuggestions([]);
+        return;
+    }
+    
+    const handler = setTimeout(async () => {
+        setIsCardSuggesting(true);
+        try {
+            const result = await suggestCardName({ bankName: watchedBankName, query: watchedCardName });
+            setCardSuggestions(result.suggestions);
+        } catch (error) {
+            console.error("Error fetching card suggestions:", error);
+            setCardSuggestions([]);
+        } finally {
+            setIsCardSuggesting(false);
+        }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [watchedCardName, watchedBankName]);
+
+  useEffect(() => {
+    if (cardSuggestions.length > 0 && !isCardSuggesting) {
+      setIsCardSuggestionPopoverOpen(true);
+    } else {
+      setIsCardSuggestionPopoverOpen(false);
+    }
+  }, [cardSuggestions, isCardSuggesting]);
 
 
   return (
@@ -112,7 +147,7 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Nama Bank</FormLabel>
-                <Popover open={isSuggestionPopoverOpen} onOpenChange={setIsSuggestionPopoverOpen}>
+                <Popover open={isBankSuggestionPopoverOpen} onOpenChange={setIsBankSuggestionPopoverOpen}>
                     <PopoverTrigger asChild>
                         <FormControl>
                         <div className="relative">
@@ -121,18 +156,18 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
                                 {...field}
                                 autoComplete="off"
                             />
-                             {isSuggesting && <Loader2 className="animate-spin absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />}
+                             {isBankSuggesting && <Loader2 className="animate-spin absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />}
                         </div>
                         </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1">
-                        {suggestions.map((suggestion, index) => (
+                        {bankSuggestions.map((suggestion, index) => (
                         <div
                             key={index}
                             className="p-2 rounded-sm hover:bg-accent cursor-pointer text-sm"
                             onClick={() => {
                                 form.setValue("bankName", suggestion, { shouldValidate: true, shouldDirty: true });
-                                setSuggestions([]); 
+                                setBankSuggestions([]); 
                             }}
                         >
                             {suggestion}
@@ -150,9 +185,35 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Nama Kartu</FormLabel>
-                <FormControl>
-                  <Input placeholder="Contoh: BPA Platinum" {...field} />
-                </FormControl>
+                <Popover open={isCardSuggestionPopoverOpen} onOpenChange={setIsCardSuggestionPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <FormControl>
+                        <div className="relative">
+                            <Input
+                                placeholder="Pilih bank dulu"
+                                {...field}
+                                autoComplete="off"
+                                disabled={!watchedBankName}
+                            />
+                             {isCardSuggesting && <Loader2 className="animate-spin absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />}
+                        </div>
+                        </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1">
+                        {cardSuggestions.map((suggestion, index) => (
+                        <div
+                            key={index}
+                            className="p-2 rounded-sm hover:bg-accent cursor-pointer text-sm"
+                            onClick={() => {
+                                form.setValue("cardName", suggestion, { shouldValidate: true, shouldDirty: true });
+                                setCardSuggestions([]); 
+                            }}
+                        >
+                            {suggestion}
+                        </div>
+                        ))}
+                    </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}
