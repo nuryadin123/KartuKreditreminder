@@ -29,7 +29,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { formatCurrency } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2, Database } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2 } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { PaymentDialog } from "@/components/cards/payment-dialog";
@@ -38,53 +38,8 @@ import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog"
 import { Progress } from "@/components/ui/progress";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useAuth } from "@/context/auth-context";
-
-// --- Seed Data from Image ---
-const initialCards: Omit<CreditCard, 'id' | 'userId'>[] = [
-  { bankName: 'Ovo', cardName: 'Ovo Nur Card', last4Digits: '0600', creditLimit: 45000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Touch', cardName: 'Touch Nur Card', last4Digits: '5409', creditLimit: 25500000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Tokopedia', cardName: 'Tokped Nur Card', last4Digits: '5200', creditLimit: 72000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BTN', cardName: 'Btn Nur Card', last4Digits: '6007', creditLimit: 40000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Samsung', cardName: 'Samsung Nur Card', last4Digits: '1111', creditLimit: 50000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Line', cardName: 'Line Nur', last4Digits: '2222', creditLimit: 132000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BNI', cardName: 'Bni World', last4Digits: '4740', creditLimit: 51000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BNI', cardName: 'Bni Signa Nur', last4Digits: '3333', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Mega', cardName: 'Mega Card', last4Digits: '4857', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'CIMB Niaga', cardName: 'Golf Card', last4Digits: '9073', creditLimit: 100000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BCA', cardName: 'BCA Card', last4Digits: '5308', creditLimit: 70000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'PCS', cardName: 'PCS Nur Card', last4Digits: '4157', creditLimit: 40000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'CIMB Niaga', cardName: 'Octo Card', last4Digits: '4444', creditLimit: 15000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Gojek', cardName: 'Gopinjam Nur', last4Digits: '5555', creditLimit: 11000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Gojek', cardName: 'Gopaylater Nur', last4Digits: '6666', creditLimit: 11000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Kredivo', cardName: 'Kredivo Nur', last4Digits: '7777', creditLimit: 50000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Honest', cardName: 'Honest Card', last4Digits: '8888', creditLimit: 51000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'UOB', cardName: 'UOB Nur Card', last4Digits: '9999', creditLimit: 10000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BTN', cardName: 'BTN Ali Card', last4Digits: '8409', creditLimit: 60000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Tokopedia', cardName: 'Toped Ali Card', last4Digits: '8201', creditLimit: 49000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Ovo', cardName: 'Ovo Ali Card', last4Digits: '1001', creditLimit: 23700000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Samsung', cardName: 'Samsung Ali Card', last4Digits: '1002', creditLimit: 35000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Paper', cardName: 'Paper Ali Card', last4Digits: '1003', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Nex', cardName: 'Nex Ali Card', last4Digits: '1004', creditLimit: 20000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BCA', cardName: 'BCA Ali Card', last4Digits: '1005', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BNI', cardName: 'BNI Batik Ali Card', last4Digits: '1006', creditLimit: 28000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BNI', cardName: 'BNI Word Ali Card', last4Digits: '1007', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'BNI', cardName: 'BNI Titanium Ali Card', last4Digits: '1008', creditLimit: 30000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Mandiri', cardName: 'Mandiri Ali Card', last4Digits: '1009', creditLimit: 40000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'PCS', cardName: 'PCS Ali Card', last4Digits: '1010', creditLimit: 10000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'CIMB Niaga', cardName: 'CIMB Accor Ali Card', last4Digits: '1011', creditLimit: 20000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'Line', cardName: 'Line Ali Card', last4Digits: '1012', creditLimit: 105000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-  { bankName: 'UOB', cardName: 'UOB Ali Card', last4Digits: '1013', creditLimit: 10000000, billingDate: 15, dueDate: 25, interestRate: 21 },
-];
-
-const initialUsages: (number | null)[] = [
-  27699994, 937846, 47088763, 18556750, 35736663, 132000000, 50984923, 29920003,
-  10004074, 100113716, 41391666, 40000000, 14975999, 11000000, null, null, null, null,
-  24215862, 39737899, 7868906, 21227557, 14109333, 2582782, 18318736, 23438334,
-  25755006, 23348340, 40213519, 3798793, 19984331, 105000000, null,
-];
-// --- End Seed Data ---
 
 
 export default function CardsPage() {
@@ -96,7 +51,6 @@ export default function CardsPage() {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
@@ -211,54 +165,6 @@ export default function CardsPage() {
     }
   };
   
-  const handleSeedData = async () => {
-    if (!user) {
-        toast({ title: "Gagal", description: "Anda harus masuk untuk menambahkan data contoh.", variant: "destructive" });
-        return;
-    }
-    if (cards.length > 0) {
-        toast({ title: "Informasi", description: "Anda sudah memiliki data kartu." });
-        return;
-    }
-
-    setIsSeeding(true);
-    try {
-        const addedCardIds: string[] = [];
-        for (const cardData of initialCards) {
-            const docRef = await addDoc(collection(db, 'cards'), { ...cardData, userId: user.uid });
-            addedCardIds.push(docRef.id);
-        }
-
-        const transactionBatch = writeBatch(db);
-        initialUsages.forEach((usage, index) => {
-            if (usage !== null && usage > 0) {
-                const cardId = addedCardIds[index];
-                if (cardId) {
-                    const transactionRef = doc(collection(db, 'transactions'));
-                    const transactionData: Omit<Transaction, 'id'> = {
-                        userId: user.uid,
-                        cardId: cardId,
-                        date: new Date().toISOString(),
-                        description: 'Pemakaian Awal',
-                        amount: usage,
-                        category: 'Lainnya',
-                        status: 'belum lunas'
-                    };
-                    transactionBatch.set(transactionRef, transactionData);
-                }
-            }
-        });
-        await transactionBatch.commit();
-        
-        toast({ title: "Data Contoh Ditambahkan", description: "Data kartu dan transaksi berhasil ditambahkan." });
-    } catch (error) {
-        toast({ title: "Gagal Menambahkan Data", description: "Terjadi kesalahan.", variant: "destructive" });
-    } finally {
-        setIsSeeding(false);
-    }
-  };
-
-
   const getNextReminderDate = (card: CreditCard): Date | null => {
     if (!card.limitIncreaseReminder || card.limitIncreaseReminder === 'tidak' || !card.lastLimitIncreaseDate) {
         return null;
@@ -393,19 +299,11 @@ export default function CardsPage() {
         {cards.length === 0 && !isLoading && (
             <div className="text-center py-10 text-muted-foreground col-span-full border-2 border-dashed rounded-lg">
                 <h3 className="text-lg font-medium">Anda belum punya kartu</h3>
-                <p className="text-sm mb-4">Silakan tambahkan kartu kredit pertama Anda atau gunakan data contoh.</p>
+                <p className="text-sm mb-4">Silakan tambahkan kartu kredit pertama Anda.</p>
                 <div className="flex justify-center gap-2">
                     <Button onClick={() => handleOpenForm()}>
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Tambah Kartu Manual
-                    </Button>
-                    <Button onClick={handleSeedData} variant="secondary" disabled={isSeeding}>
-                        {isSeeding ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Database className="mr-2 h-4 w-4" />
-                        )}
-                        Isi dengan Data Contoh
+                        Tambah Kartu
                     </Button>
                 </div>
             </div>
@@ -460,5 +358,3 @@ export default function CardsPage() {
     </>
   );
 }
-
-    
