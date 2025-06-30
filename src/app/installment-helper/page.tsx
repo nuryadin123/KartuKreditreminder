@@ -7,16 +7,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { getInstallmentPlan, type InstallmentPlanOutput } from "@/ai/flows/installment-plan-flow";
-import type { CreditCard } from "@/types";
+import type { CreditCard, Transaction } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, ReceiptText } from "lucide-react";
+import { Loader2, Sparkles, ReceiptText, PlusCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
@@ -29,9 +30,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function InstallmentHelperPage() {
   const [cards] = useLocalStorage<CreditCard[]>("kredit-track-cards", []);
+  const [, setTransactions] = useLocalStorage<Transaction[]>("kredit-track-transactions", []);
   const [plan, setPlan] = useState<InstallmentPlanOutput | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -48,6 +51,8 @@ export default function InstallmentHelperPage() {
     const selectedCard = cards.find(c => c.id === cardId);
     if (selectedCard) {
       form.setValue("interestRate", selectedCard.interestRate * 12, { shouldValidate: true });
+    } else {
+       form.setValue("interestRate", undefined, { shouldValidate: true });
     }
   };
 
@@ -74,11 +79,43 @@ export default function InstallmentHelperPage() {
     }
   };
 
+  const handleApplyInstallment = () => {
+    const formValues = form.getValues();
+    if (!plan || !formValues.cardId) {
+      toast({
+        title: "Gagal Menerapkan Cicilan",
+        description: "Harap pilih kartu dan jalankan simulasi terlebih dahulu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newTransaction: Transaction = {
+      id: `txn-${Date.now()}`,
+      cardId: formValues.cardId,
+      date: new Date().toISOString(),
+      description: `Cicilan: Transaksi ${formatCurrency(formValues.transactionAmount)} selama ${formValues.tenor} bulan`,
+      amount: formValues.transactionAmount,
+      category: 'Lainnya',
+      status: 'belum lunas',
+    };
+
+    setTransactions(prevTransactions => [newTransaction, ...prevTransactions]);
+
+    toast({
+      title: "Cicilan Berhasil Diterapkan",
+      description: "Transaksi baru telah ditambahkan dan akan tersinkronisasi.",
+    });
+
+    setPlan(null); // Reset the view after applying
+  };
+
+
   return (
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Asisten Cicilan AI</h1>
-        <p className="text-muted-foreground">Simulasikan rencana cicilan untuk transaksi Anda.</p>
+        <p className="text-muted-foreground">Simulasikan dan terapkan rencana cicilan untuk transaksi Anda.</p>
       </div>
 
       <Card>
@@ -136,10 +173,11 @@ export default function InstallmentHelperPage() {
                       <Select onValueChange={handleCardChange} value={field.value} disabled={cards.length === 0}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={cards.length > 0 ? "Pilih kartu untuk isi bunga otomatis" : "Tidak ada kartu"} />
+                            <SelectValue placeholder={cards.length > 0 ? "Pilih kartu untuk terapkan cicilan" : "Tidak ada kartu"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Jangan gunakan kartu</SelectItem>
                           {cards.map(card => (
                             <SelectItem key={card.id} value={card.id}>
                               {card.cardName}
@@ -266,6 +304,14 @@ export default function InstallmentHelperPage() {
                     </div>
                 </div>
             </CardContent>
+            {form.getValues("cardId") && (
+                <CardFooter>
+                    <Button onClick={handleApplyInstallment} className="w-full">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Terapkan & Sinkronkan dengan Kartu
+                    </Button>
+                </CardFooter>
+            )}
           </Card>
         </div>
       )}
