@@ -11,7 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const InstallmentPlanInputSchema = z.object({
+const InstallmentPlanInputSchema = z.object({
   transactionAmount: z.number().describe('The total amount of the transaction to be converted into installments.'),
   interestRate: z.number().describe('The monthly interest rate of the credit card (as a percentage, e.g., 1.75 for 1.75%).'),
   tenor: z.number().int().min(1).describe('The desired number of months for the installment plan (tenor).'),
@@ -25,7 +25,7 @@ const InstallmentDetailSchema = z.object({
     remainingBalance: z.number().describe('The outstanding balance after the payment.'),
 });
 
-export const InstallmentPlanOutputSchema = z.object({
+const InstallmentPlanOutputSchema = z.object({
   monthlyInstallment: z.number().describe('The fixed amount to be paid each month.'),
   totalPayment: z.number().describe('The total amount that will be paid over the entire period.'),
   totalInterest: z.number().describe('The total interest paid over the entire period.'),
