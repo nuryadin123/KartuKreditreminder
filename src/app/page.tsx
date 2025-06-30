@@ -247,7 +247,9 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                     {filteredChartData.length > 0 ? (
-                        <DebtChart data={filteredChartData} />
+                        <div className="relative">
+                            <DebtChart data={filteredChartData} />
+                        </div>
                     ) : (
                         <div className="flex h-64 items-center justify-center">
                             <p className="text-muted-foreground">Tidak ada data utang untuk ditampilkan.</p>
