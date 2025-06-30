@@ -17,6 +17,18 @@ export default function Home() {
   const [upcomingDueDate, setUpcomingDueDate] = useState<Date | null>(null);
   const { toast } = useToast();
   const [notificationsShown, setNotificationsShown] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && "Notification" in window) {
+      setNotificationPermission(Notification.permission);
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+        });
+      }
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -82,15 +94,23 @@ export default function Home() {
       const dueDateInCycle = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
       
       if (isAfter(dueDateInCycle, subDays(today, 1)) && isBefore(dueDateInCycle, threeDaysFromNow)) {
+        const description = `Tagihan kartu ${card.cardName} sebesar ${formatCurrency(debt)} akan jatuh tempo pada ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long'}).format(dueDateInCycle)}.`;
+        
         toast({
           title: "🔔 Pengingat Pembayaran",
-          description: `Tagihan kartu ${card.cardName} sebesar ${formatCurrency(debt)} akan jatuh tempo pada ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long'}).format(dueDateInCycle)}.`,
+          description: description,
         });
+
+        if (notificationPermission === 'granted') {
+          new Notification("🔔 Pengingat Pembayaran", {
+            body: description,
+          });
+        }
       }
     });
 
     setNotificationsShown(true);
-  }, [cards, chartData, loadingCards, loadingTransactions, notificationsShown, toast]);
+  }, [cards, chartData, loadingCards, loadingTransactions, notificationsShown, toast, notificationPermission]);
 
   const isLoading = loadingCards || loadingTransactions;
 
