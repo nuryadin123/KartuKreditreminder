@@ -60,10 +60,10 @@ export default function CardsPage() {
     cards.forEach(card => {
         const cardSpending = transactions
             .filter(t => t.cardId === card.id && t.category !== 'Pembayaran')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => sum + Number(t.amount || 0), 0);
         const cardPayments = transactions
             .filter(t => t.cardId === card.id && t.category === 'Pembayaran')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => sum + Number(t.amount || 0), 0);
         const debt = cardSpending - cardPayments;
         debts.set(card.id, debt);
     });

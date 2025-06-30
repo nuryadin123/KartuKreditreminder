@@ -38,21 +38,21 @@ export default function Home() {
     
     const spending = transactions
         .filter(t => t.category !== 'Pembayaran')
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
     const payments = transactions
         .filter(t => t.category === 'Pembayaran')
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
     const totalDebt = spending - payments;
 
     const chartData = cards.map(card => {
         const cardSpending = transactions
             .filter(t => t.cardId === card.id && t.category !== 'Pembayaran')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => sum + Number(t.amount || 0), 0);
         const cardPayments = transactions
             .filter(t => t.cardId === card.id && t.category === 'Pembayaran')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => sum + Number(t.amount || 0), 0);
         const debt = cardSpending - cardPayments;
         return { name: card.cardName, "Total Utang": debt > 0 ? debt : 0 };
     });
