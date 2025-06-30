@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { addMonths } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { formatCurrency } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2, Search } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { PaymentDialog } from "@/components/cards/payment-dialog";
@@ -54,6 +55,17 @@ export default function CardsPage() {
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredCards = useMemo(() => {
+    if (!searchQuery) {
+        return cards;
+    }
+    return cards.filter(card => 
+        card.cardName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        card.bankName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [cards, searchQuery]);
 
   const cardDebts = useMemo(() => {
     const debts = new Map<string, number>();
@@ -179,15 +191,27 @@ export default function CardsPage() {
   return (
     <>
       <div className="flex flex-col gap-8">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
               <h1 className="text-3xl font-bold tracking-tight">Kartu Kredit Anda</h1>
               <p className="text-muted-foreground">Kelola semua kartu kredit Anda di satu tempat.</p>
           </div>
-          <Button onClick={() => handleOpenForm()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Kartu
-          </Button>
+          <div className="flex w-full sm:w-auto items-center gap-2">
+            <div className="relative flex-grow sm:flex-grow-0">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Cari kartu atau bank..."
+                    className="pl-8 w-full sm:w-[250px] lg:w-[300px]"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <Button onClick={() => handleOpenForm()}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Tambah Kartu
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -204,9 +228,23 @@ export default function CardsPage() {
                     </Card>
                 ))}
             </div>
+        ) : cards.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground col-span-full border-2 border-dashed rounded-lg">
+                <h3 className="text-lg font-medium">Anda belum punya kartu</h3>
+                <p className="text-sm mb-4">Silakan tambahkan kartu kredit pertama Anda.</p>
+                <Button onClick={() => handleOpenForm()}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Tambah Kartu
+                </Button>
+            </div>
+        ) : filteredCards.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground col-span-full border-2 border-dashed rounded-lg">
+                <h3 className="text-lg font-medium">Kartu tidak ditemukan</h3>
+                <p className="text-sm">Tidak ada kartu yang cocok dengan pencarian Anda.</p>
+            </div>
         ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {cards.map(card => {
+            {filteredCards.map(card => {
                 const debt = cardDebts.get(card.id) || 0;
                 const availableCredit = card.creditLimit - debt;
                 const debtPercentage = card.creditLimit > 0 ? ((debt > 0 ? debt : 0) / card.creditLimit) * 100 : 0;
@@ -294,18 +332,6 @@ export default function CardsPage() {
                 </CardFooter>
                 </Card>
             )})}
-            </div>
-        )}
-        {cards.length === 0 && !isLoading && (
-            <div className="text-center py-10 text-muted-foreground col-span-full border-2 border-dashed rounded-lg">
-                <h3 className="text-lg font-medium">Anda belum punya kartu</h3>
-                <p className="text-sm mb-4">Silakan tambahkan kartu kredit pertama Anda.</p>
-                <div className="flex justify-center gap-2">
-                    <Button onClick={() => handleOpenForm()}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Tambah Kartu
-                    </Button>
-                </div>
             </div>
         )}
       </div>
