@@ -1,39 +1,36 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockCards, mockTransactions } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
-import { CreditCard, DollarSign, Calendar, Users } from "lucide-react";
+import { CreditCard, DollarSign, Calendar } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
 import type { CreditCard as CreditCardType } from "@/types";
 
 export default function Home() {
+  const [upcomingDueDate, setUpcomingDueDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const getNextDueDate = (card: CreditCardType) => {
+      const today = new Date();
+      let dueDate = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
+      if (dueDate < today) {
+        dueDate.setMonth(dueDate.getMonth() + 1);
+      }
+      return dueDate;
+    };
+
+    const nextDueDate = mockCards
+      .map(getNextDueDate)
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+    
+    setUpcomingDueDate(nextDueDate || null);
+  }, []);
+
   const totalDebt = mockTransactions
     .filter((t) => t.status === 'unpaid')
     .reduce((sum, t) => sum + t.amount, 0);
-
-  const nextPayment = mockTransactions
-    .filter((t) => t.status === 'unpaid')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .find(t => {
-      const card = mockCards.find(c => c.id === t.cardId);
-      if (!card) return false;
-      const today = new Date();
-      const dueDate = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
-      return dueDate >= today;
-    });
-  
-  const getNextDueDate = (card: CreditCardType) => {
-    const today = new Date();
-    let dueDate = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
-    if(dueDate < today) {
-      dueDate.setMonth(dueDate.getMonth() + 1);
-    }
-    return dueDate;
-  };
-
-  const upcomingDueDate = mockCards
-    .map(getNextDueDate)
-    .sort((a,b) => a.getTime() - b.getTime())[0];
-
 
   const chartData = mockCards.map(card => {
     const debt = mockTransactions
@@ -77,7 +74,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'N/A'}
+              {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'Memuat...'}
             </div>
             <p className="text-xs text-muted-foreground">
               Tanggal jatuh tempo terdekat
