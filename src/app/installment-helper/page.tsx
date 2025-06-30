@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -20,8 +19,8 @@ import { formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
-  cardId: z.string({ required_error: "Silakan pilih kartu." }),
-  tenor: z.string({ required_error: "Tenor harus diisi." }),
+  cardId: z.string({ required_error: "Silakan pilih kartu." }).min(1, "Silakan pilih kartu."),
+  tenor: z.string({ required_error: "Tenor harus diisi." }).min(1, "Tenor harus diisi."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -36,8 +35,8 @@ export default function InstallmentHelperPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       transactionAmount: undefined,
-      cardId: undefined,
-      tenor: undefined,
+      cardId: "",
+      tenor: "",
     },
   });
 
@@ -102,7 +101,7 @@ export default function InstallmentHelperPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kartu Kredit</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={cards.length === 0}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={cards.length === 0}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={cards.length > 0 ? "Pilih kartu" : "Tidak ada kartu"} />
@@ -126,7 +125,7 @@ export default function InstallmentHelperPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tenor (Bulan)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Pilih tenor" />
