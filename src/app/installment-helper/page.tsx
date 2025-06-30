@@ -23,8 +23,8 @@ import { addDoc, collection } from "firebase/firestore";
 
 const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
-  adminFeeBank: z.coerce.number().optional(),
-  adminFeeMarketplace: z.coerce.number().optional(),
+  adminFeeBankPercentage: z.coerce.number().min(0, "Persentase tidak boleh negatif.").optional(),
+  adminFeeMarketplacePercentage: z.coerce.number().min(0, "Persentase tidak boleh negatif.").optional(),
   cardId: z.string().optional(),
   interestRate: z.coerce.number({ required_error: "Suku bunga harus diisi." }).min(0, "Suku bunga tidak boleh negatif."),
   tenor: z.string({ required_error: "Tenor harus diisi." }),
@@ -43,8 +43,8 @@ export default function InstallmentHelperPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       transactionAmount: undefined,
-      adminFeeBank: undefined,
-      adminFeeMarketplace: undefined,
+      adminFeeBankPercentage: undefined,
+      adminFeeMarketplacePercentage: undefined,
       cardId: "no-card",
       interestRate: undefined,
       tenor: "",
@@ -68,14 +68,17 @@ export default function InstallmentHelperPage() {
     setPlan(null);
     setError(null);
 
+    const adminFeeBankAmount = values.adminFeeBankPercentage ? (values.transactionAmount * values.adminFeeBankPercentage) / 100 : undefined;
+    const adminFeeMarketplaceAmount = values.adminFeeMarketplacePercentage ? (values.transactionAmount * values.adminFeeMarketplacePercentage) / 100 : undefined;
+
     try {
       const result = await getInstallmentPlan({
         transactionAmount: values.transactionAmount,
         interestRate: values.interestRate,
         tenor: Number(values.tenor),
         bankName: selectedCard?.bankName,
-        adminFeeBank: values.adminFeeBank,
-        adminFeeMarketplace: values.adminFeeMarketplace,
+        adminFeeBank: adminFeeBankAmount,
+        adminFeeMarketplace: adminFeeMarketplaceAmount,
       });
       setPlan(result);
     } catch (e) {
@@ -97,7 +100,9 @@ export default function InstallmentHelperPage() {
       return;
     }
 
-    const totalPrincipal = (formValues.transactionAmount || 0) + (formValues.adminFeeBank || 0) + (formValues.adminFeeMarketplace || 0);
+    const adminFeeBankAmount = formValues.adminFeeBankPercentage ? (formValues.transactionAmount * formValues.adminFeeBankPercentage) / 100 : 0;
+    const adminFeeMarketplaceAmount = formValues.adminFeeMarketplacePercentage ? (formValues.transactionAmount * formValues.adminFeeMarketplacePercentage) / 100 : 0;
+    const totalPrincipal = (formValues.transactionAmount || 0) + adminFeeBankAmount + adminFeeMarketplaceAmount;
 
     const newTransaction: Omit<Transaction, 'id'> = {
       cardId: formValues.cardId,
@@ -183,12 +188,12 @@ export default function InstallmentHelperPage() {
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="adminFeeBank"
+                  name="adminFeeBankPercentage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Admin Bank (Opsional)</FormLabel>
+                      <FormLabel>Admin Bank (%) (Opsional)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Contoh: 15000" {...field} value={field.value || ''} />
+                        <Input type="number" step="0.01" placeholder="Contoh: 1.5" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,12 +201,12 @@ export default function InstallmentHelperPage() {
                 />
                  <FormField
                   control={form.control}
-                  name="adminFeeMarketplace"
+                  name="adminFeeMarketplacePercentage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Admin Marketplace (Opsional)</FormLabel>
+                      <FormLabel>Admin Marketplace (%) (Opsional)</FormLabel>
                        <FormControl>
-                        <Input type="number" placeholder="Contoh: 10000" {...field} value={field.value || ''} />
+                        <Input type="number" step="0.01" placeholder="Contoh: 0.5" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
