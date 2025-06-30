@@ -302,6 +302,7 @@ export default function CardsPage() {
 
       <PaymentDialog
         card={selectedCard}
+        transactions={transactions}
         open={isPaymentDialogOpen}
         onOpenChange={setIsPaymentDialogOpen}
         onSubmit={handlePayment}
