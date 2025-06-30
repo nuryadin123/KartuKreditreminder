@@ -50,7 +50,7 @@ export default function InstallmentHelperPage() {
     form.setValue("cardId", cardId, { shouldValidate: true });
     const selectedCard = cards.find(c => c.id === cardId);
     if (selectedCard) {
-      form.setValue("interestRate", selectedCard.interestRate * 12, { shouldValidate: true });
+      form.setValue("interestRate", selectedCard.interestRate, { shouldValidate: true });
     } else {
        form.setValue("interestRate", undefined, { shouldValidate: true });
     }

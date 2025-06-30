@@ -58,7 +58,7 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
       creditLimit: defaultValues?.creditLimit || 0,
       billingDate: defaultValues?.billingDate || 1,
       dueDate: defaultValues?.dueDate || 1,
-      interestRate: defaultValues?.interestRate || 1.75,
+      interestRate: defaultValues?.interestRate || 21,
       limitIncreaseReminder: defaultValues?.limitIncreaseReminder || 'tidak',
       lastLimitIncreaseDate: defaultValues?.lastLimitIncreaseDate ? new Date(defaultValues.lastLimitIncreaseDate) : undefined,
     },
@@ -278,9 +278,9 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
             name="interestRate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Suku Bunga (% per bulan)</FormLabel>
+                <FormLabel>Suku Bunga (% per tahun)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="1.75" {...field} />
+                  <Input type="number" step="0.01" placeholder="21" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

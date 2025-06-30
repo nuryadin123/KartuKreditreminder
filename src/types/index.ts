@@ -5,7 +5,7 @@ export interface CreditCard {
   creditLimit: number;
   billingDate: number; // day of month
   dueDate: number; // day of month
-  interestRate: number;
+  interestRate: number; // annual interest rate percentage
   last4Digits: string;
   limitIncreaseReminder?: '3-bulan' | '6-bulan' | 'tidak';
   lastLimitIncreaseDate?: string; // ISO date string

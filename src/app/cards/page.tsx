@@ -238,7 +238,7 @@ export default function CardsPage() {
                 </div>
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm text-muted-foreground">Suku Bunga</span>
-                  <span className="font-semibold">{card.interestRate}% / bulan</span>
+                  <span className="font-semibold">{card.interestRate}% / tahun</span>
                 </div>
                 {nextReminderDate ? (
                     <div className="flex justify-between items-baseline">

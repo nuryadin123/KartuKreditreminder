@@ -70,8 +70,8 @@ export function PaymentDialog({ card, transactions, open, onOpenChange, onSubmit
         }
 
         const tenor = parseInt(tenorMatch[1], 10);
-        // Card stores monthly interest rate, but flat calculation uses annual.
-        const annualInterestRate = card.interestRate * 12;
+        // Card now stores annual interest rate.
+        const annualInterestRate = card.interestRate;
 
         // Re-calculate monthly flat installment based on the original transaction
         const totalInterest = principal * (annualInterestRate / 100) * (tenor / 12);

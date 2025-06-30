@@ -8,7 +8,7 @@ export const mockCards: CreditCard[] = [
     creditLimit: 50000000,
     billingDate: 1,
     dueDate: 25,
-    interestRate: 2.5,
+    interestRate: 30, // 2.5% monthly * 12
     last4Digits: "1234",
     limitIncreaseReminder: "6-bulan",
     lastLimitIncreaseDate: "2024-05-01T00:00:00Z",
@@ -20,7 +20,7 @@ export const mockCards: CreditCard[] = [
     creditLimit: 25000000,
     billingDate: 20,
     dueDate: 15,
-    interestRate: 2.75,
+    interestRate: 33, // 2.75% monthly * 12
     last4Digits: "5678",
     limitIncreaseReminder: "3-bulan",
     lastLimitIncreaseDate: "2024-06-15T00:00:00Z",
@@ -32,7 +32,7 @@ export const mockCards: CreditCard[] = [
     creditLimit: 75000000,
     billingDate: 10,
     dueDate: 5,
-    interestRate: 1.9,
+    interestRate: 22.8, // 1.9% monthly * 12
     last4Digits: "9012",
     limitIncreaseReminder: "tidak",
   },
