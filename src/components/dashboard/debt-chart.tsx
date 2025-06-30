@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Bar, BarChart, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, XAxis, YAxis, Cell } from "recharts"
 
 import {
   ChartContainer,
@@ -18,7 +18,6 @@ interface DebtChartProps {
 const chartConfig = {
   "Total Utang": {
     label: "Total Utang",
-    color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
 
@@ -54,10 +53,13 @@ export function DebtChart({ data }: DebtChartProps) {
           />
           <Bar 
             dataKey="Total Utang" 
-            fill="var(--color-Total Utang)" 
-            radius={4}
             layout="vertical"
-          />
+            radius={4}
+          >
+            {data.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 10) + 1}))`} />
+            ))}
+          </Bar>
         </BarChart>
       </ChartContainer>
     </div>
