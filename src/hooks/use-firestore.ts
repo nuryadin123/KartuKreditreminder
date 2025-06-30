@@ -1,28 +1,29 @@
 
 "use client";
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 /**
- * A real-time hook to listen to a Firestore collection.
+ * A real-time hook to listen to a Firestore collection, filtered by user ID.
  * @param collectionName The name of the Firestore collection.
+ * @param userId The ID of the currently logged-in user.
  * @returns An object containing the collection data, loading state, and any errors.
- * Note: The returned documents will have their Firestore ID mapped to the 'id' property.
  */
-export function useFirestoreCollection<T>(collectionName: string) {
+export function useFirestoreCollection<T>(collectionName: string, userId: string | null | undefined) {
     const [data, setData] = useState<T[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        if (!collectionName) {
+        if (!collectionName || !userId) {
+            setData([]);
             setLoading(false);
             return;
         }
         
         const collectionRef = collection(db, collectionName);
-        const q = query(collectionRef);
+        const q = query(collectionRef, where("userId", "==", userId));
         
         const unsubscribe = onSnapshot(q, 
             (querySnapshot) => {
@@ -41,7 +42,7 @@ export function useFirestoreCollection<T>(collectionName: string) {
         );
 
         return () => unsubscribe();
-    }, [collectionName]);
+    }, [collectionName, userId]);
 
     return { data, loading, error };
 }

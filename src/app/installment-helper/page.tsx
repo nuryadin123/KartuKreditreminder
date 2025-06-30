@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -19,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
 import { addDoc, collection } from "firebase/firestore";
+import { useAuth } from "@/context/auth-context";
 
 const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
@@ -32,7 +34,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function InstallmentHelperPage() {
-  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards");
+  const { user } = useAuth();
+  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards", user?.uid);
   const [plan, setPlan] = useState<InstallmentPlanOutput | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,10 +93,10 @@ export default function InstallmentHelperPage() {
 
   const handleApplyInstallment = async () => {
     const formValues = form.getValues();
-    if (!plan || !formValues.cardId || formValues.cardId === 'no-card') {
+    if (!plan || !formValues.cardId || formValues.cardId === 'no-card' || !user) {
       toast({
         title: "Gagal Menerapkan Cicilan",
-        description: "Harap pilih kartu dan jalankan simulasi terlebih dahulu.",
+        description: "Harap pilih kartu, jalankan simulasi, dan pastikan Anda sudah masuk.",
         variant: "destructive",
       });
       return;
@@ -105,6 +108,7 @@ export default function InstallmentHelperPage() {
     const totalPrincipal = transactionAmountNumber + adminFeeBankAmount + adminFeeMarketplaceAmount;
 
     const newTransaction: Omit<Transaction, 'id'> = {
+      userId: user.uid,
       cardId: formValues.cardId,
       date: new Date().toISOString(),
       description: `Cicilan: Transaksi ${formatCurrency(transactionAmountNumber)} (+ admin) selama ${formValues.tenor} bulan`,

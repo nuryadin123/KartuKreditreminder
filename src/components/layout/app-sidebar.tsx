@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -12,8 +13,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, CreditCard, Calculator } from "lucide-react";
+import { LayoutDashboard, Receipt, CreditCard, Calculator, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
+import { auth } from "@/lib/firebase";
+import { Button } from "../ui/button";
 
 const links = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
@@ -24,6 +28,17 @@ const links = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+  };
+  
+  const getInitials = (email: string | null | undefined) => {
+    if (!email) return '..';
+    const parts = email.split('@')[0].split(/[._-]/);
+    return parts.map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -56,13 +71,16 @@ export function AppSidebar() {
       <SidebarFooter>
         <div className="flex items-center gap-3 p-2">
           <Avatar className="h-9 w-9">
-            <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" />
-            <AvatarFallback>AK</AvatarFallback>
+            <AvatarImage src="" alt="User Avatar" />
+            <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">Andi K.</span>
-            <span className="text-xs text-muted-foreground">andi.k@email.com</span>
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-sm font-medium truncate">{user?.displayName || 'Pengguna'}</span>
+            <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
           </div>
+           <Button variant="ghost" size="icon" className="ml-auto" onClick={handleLogout} aria-label="Keluar">
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>

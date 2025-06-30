@@ -39,11 +39,13 @@ import { Progress } from "@/components/ui/progress";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { useAuth } from "@/context/auth-context";
 
 
 export default function CardsPage() {
-  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards");
-  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions");
+  const { user } = useAuth();
+  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards", user?.uid);
+  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions", user?.uid);
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -106,8 +108,13 @@ export default function CardsPage() {
   };
 
   const handleSubmit = async (values: CardFormValues) => {
+    if (!user) {
+        toast({ title: "Gagal", description: "Anda harus masuk untuk menyimpan kartu.", variant: "destructive" });
+        return;
+    }
     const cardData = {
         ...values,
+        userId: user.uid,
         lastLimitIncreaseDate: values.lastLimitIncreaseDate?.toISOString()
     }
     try {
@@ -140,8 +147,9 @@ export default function CardsPage() {
   };
 
   const handlePayment = async ({ amount }: { amount: number }) => {
-    if (selectedCard) {
+    if (selectedCard && user) {
       const newPayment: Omit<Transaction, 'id'> = {
+        userId: user.uid,
         cardId: selectedCard.id,
         date: new Date().toISOString(),
         description: `Pembayaran Kartu Kredit`,

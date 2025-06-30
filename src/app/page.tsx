@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -10,10 +11,12 @@ import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { useToast } from "@/hooks/use-toast";
 import { addDays, isAfter, isBefore, startOfToday, subDays } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/context/auth-context";
 
 export default function Home() {
-  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCardType>("cards");
-  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions");
+  const { user } = useAuth();
+  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCardType>("cards", user?.uid);
+  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions", user?.uid);
   const [upcomingDueDate, setUpcomingDueDate] = useState<Date | null>(null);
   const { toast } = useToast();
   const [notificationsShown, setNotificationsShown] = useState(false);
@@ -152,7 +155,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dasbord</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dasbor</h1>
         <p className="text-muted-foreground">Ringkasan utang dan kartu kredit Anda.</p>
       </div>
 

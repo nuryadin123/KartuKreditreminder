@@ -1,5 +1,7 @@
+
 export interface CreditCard {
   id: string;
+  userId: string;
   bankName: string;
   cardName: string;
   creditLimit: number;
@@ -18,6 +20,7 @@ export interface InstallmentDetails {
 
 export interface Transaction {
   id:string;
+  userId: string;
   cardId: string;
   date: string; // ISO date string
   description: string;

@@ -38,10 +38,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { useAuth } from '@/context/auth-context';
 
 export default function TransactionsPage() {
-  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions");
-  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards");
+  const { user } = useAuth();
+  const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions", user?.uid);
+  const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards", user?.uid);
 
   const [filterCard, setFilterCard] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -95,16 +97,22 @@ export default function TransactionsPage() {
     setIsDeleteAlertOpen(false);
   };
 
-  const handleSubmit = async (values: Omit<Transaction, "id" | "status" | "installmentDetails"> & {date: Date}) => {
+  const handleSubmit = async (values: Omit<Transaction, "id" | "userId" | "status" | "installmentDetails"> & {date: Date}) => {
+    if (!user) {
+        toast({ title: "Gagal", description: "Anda harus masuk untuk menyimpan transaksi.", variant: "destructive" });
+        return;
+    }
+    
     const transactionData = {
         ...values,
+        userId: user.uid,
         date: values.date.toISOString(),
     }
     try {
         if (selectedTransaction) {
             const transactionRef = doc(db, 'transactions', selectedTransaction.id);
             // Don't include ID in the update payload
-            const { id, ...updateData } = { ...selectedTransaction, ...transactionData };
+            const { id, userId, ...updateData } = { ...selectedTransaction, ...transactionData };
             await updateDoc(transactionRef, updateData as any);
             toast({ title: "Transaksi Diperbarui", description: "Data transaksi berhasil diperbarui." });
         } else {

@@ -1,8 +1,9 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from '@/context/auth-context';
+import { ProtectedLayout } from '@/components/layout/protected-layout';
 
 export const metadata: Metadata = {
   title: 'KARTUMU',
@@ -25,14 +26,11 @@ export default function RootLayout({
         ></link>
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <main className="min-h-svh bg-background p-4 sm:p-6 lg:p-8">
-                {children}
-              </main>
-            </SidebarInset>
-        </SidebarProvider>
+        <AuthProvider>
+            <ProtectedLayout>
+              {children}
+            </ProtectedLayout>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
