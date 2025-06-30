@@ -39,25 +39,30 @@ const prompt = ai.definePrompt({
     name: 'installmentPlanPrompt',
     input: { schema: InstallmentPlanInputSchema },
     output: { schema: InstallmentPlanOutputSchema },
-    prompt: `You are an expert financial advisor specializing in credit card debt management in Indonesia. A user wants to convert a transaction into an installment plan.
+    prompt: `You are an expert financial advisor specializing in credit card debt management in Indonesia. A user wants to convert a transaction into an installment plan using a **flat interest rate** calculation.
 
 Transaction Details:
-- Amount: {{{transactionAmount}}} IDR
+- Amount (Principal): {{{transactionAmount}}} IDR
 - Annual Interest Rate: {{{interestRate}}}%
 - Tenor: {{{tenor}}} months
 {{#if bankName}}- Bank: {{{bankName}}}{{/if}}
 
 Your tasks are:
-1.  **Calculate the fixed monthly installment amount.** First, convert the annual interest rate to a monthly interest rate by dividing by 12. Then, use the standard formula for an annuity loan: M = P * (i * (1 + i)^n) / ((1 + i)^n - 1), where P is the principal, i is the *monthly* interest rate in decimal form (e.g., an annual rate of 21% becomes a monthly rate of 1.75%, which is 0.0175 in decimal), and n is the tenor. Round the result to the nearest whole number.
-2.  **Calculate the total payment and total interest.** Total Payment = Monthly Installment * Tenor. Total Interest = Total Payment - Principal.
-3.  **Generate a month-by-month amortization schedule.** For each month, show the principal payment, interest payment, and the remaining balance. The interest for a month is calculated on the remaining balance from the previous month using the *monthly* interest rate. The principal payment is the monthly installment minus the interest payment.
-4.  **Provide a brief, insightful piece of financial advice** based on the calculation. The advice must be in Indonesian and easy to understand.
+1.  **Calculate Total Interest (Flat):** Calculate the total interest for the entire period. Formula: Total Interest = Principal * (Annual Interest Rate / 100) * (Tenor in months / 12).
+2.  **Calculate Total Payment:** Total Payment = Principal + Total Interest.
+3.  **Calculate Monthly Installment:** Monthly Installment = Total Payment / Tenor. Round this to the nearest whole number.
+4.  **Generate a month-by-month amortization schedule:** For each month, calculate the components of the installment.
+    - **Monthly Principal:** This is constant. Formula: Principal / Tenor.
+    - **Monthly Interest:** This is also constant. Formula: Total Interest / Tenor.
+    - **Remaining Balance:** This decreases each month. For month \`m\`, the Remaining Balance = Principal - (Monthly Principal * \`m\`).
+5.  **Provide a brief, insightful piece of financial advice** based on the calculation. The advice must be in Indonesian and easy to understand.
+    - Explain that this is a **flat interest** calculation. Mention that while it's simple, the *effective interest rate* is often higher than it appears compared to annuity/effective rate calculations, especially for longer tenors.
     {{#if bankName}}
-    - Critically evaluate the provided annual interest rate ({{{interestRate}}}%). Compare it to typical credit card annual interest rates for {{bankName}} in Indonesia (usually between 21% and 35.4% per year). State whether the user's rate is competitive, average, or high. For example: "Suku bunga tahunan {{interestRate}}% termasuk kompetitif untuk bank {{bankName}}."
+    - Critically evaluate the provided annual interest rate ({{{interestRate}}}%). Compare it to typical credit card *flat* interest rates for {{bankName}} in Indonesia. State whether the user's rate is competitive, average, or high. For example: "Untuk perhitungan bunga flat, suku bunga tahunan {{interestRate}}% termasuk kompetitif untuk bank {{bankName}}."
     {{else}}
     - Comment on the total interest paid relative to the principal amount.
     {{/if}}
-    - Offer a relevant tip, like paying more than the minimum or considering the impact on their credit score.
+    - Offer a relevant tip, like ensuring timely payments to avoid additional fees.
 
 Return the result strictly in the specified JSON format. Ensure all calculations are accurate.`,
 });
