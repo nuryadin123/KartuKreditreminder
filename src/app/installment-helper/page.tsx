@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -101,7 +102,7 @@ export default function InstallmentHelperPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kartu Kredit</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={cards.length === 0}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={cards.length === 0}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={cards.length > 0 ? "Pilih kartu" : "Tidak ada kartu"} />
@@ -125,7 +126,7 @@ export default function InstallmentHelperPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tenor (Bulan)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Pilih tenor" />
