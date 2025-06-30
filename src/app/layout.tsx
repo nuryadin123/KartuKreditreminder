@@ -5,8 +5,8 @@ import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'KreditTrack',
-  description: 'Manajemen utang kartu kredit yang mudah.',
+  title: 'KARTUMU',
+  description: 'Manajemen utang kartu kredit.',
 };
 
 export default function RootLayout({

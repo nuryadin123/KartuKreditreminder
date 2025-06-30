@@ -152,7 +152,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dasbor</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dasbord</h1>
         <p className="text-muted-foreground">Ringkasan utang dan kartu kredit Anda.</p>
       </div>
 
