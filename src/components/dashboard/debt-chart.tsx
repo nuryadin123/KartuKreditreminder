@@ -1,72 +1,76 @@
-"use client";
+"use client"
+
+import * as React from "react"
+import { Pie, PieChart, Cell } from "recharts"
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  CartesianGrid
-} from "recharts";
-import { formatCurrency } from "@/lib/utils";
-import {
+  ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartContainer,
-} from "@/components/ui/chart";
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
+import { formatCurrency } from "@/lib/utils"
 
 interface DebtChartProps {
   data: { name: string; "Total Utang": number }[];
 }
 
+// These HSL values correspond to the chart colors in globals.css
+// Using them directly ensures consistency with the app's theme.
+const COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
+
 export function DebtChart({ data }: DebtChartProps) {
-  const chartConfig = {
-    "Total Utang": {
-      label: "Total Utang",
-      color: "hsl(var(--primary))",
-    },
-  };
+  const chartConfig = React.useMemo(() => {
+    const config: ChartConfig = {};
+    data.forEach((item, index) => {
+      config[item.name] = {
+        label: item.name,
+        color: COLORS[index % COLORS.length],
+      };
+    });
+    return config;
+  }, [data]);
+
 
   return (
-    <div className="h-64 w-full">
-      <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-        <BarChart
+    <div className="h-72 w-full"> 
+      <ChartContainer
+        config={chartConfig}
+        className="mx-auto aspect-square h-full"
+      >
+        <PieChart>
+          <ChartTooltip
+            cursor={false}
+            content={<ChartTooltipContent
+                nameKey="name"
+                formatter={(value) => formatCurrency(Number(value))}
+            />}
+          />
+          <Pie
             data={data}
-            margin={{
-                top: 5,
-                right: 20,
-                left: 20,
-                bottom: 5,
-            }}
-        >
-            <CartesianGrid vertical={false} />
-            <XAxis
-                dataKey="name"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                fontSize={12}
-            />
-            <YAxis
-                tickFormatter={(value) => formatCurrency(Number(value)).replace("Rp", "Rp ")}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                fontSize={12}
-            />
-            <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent 
-                    indicator="dot"
-                    labelFormatter={(label, payload) => payload?.[0]?.payload.name}
-                    formatter={(value) => formatCurrency(Number(value))}
-                />}
-            />
-            <Bar dataKey="Total Utang" fill="var(--color-Total Utang)" radius={[4, 4, 0, 0]} maxBarSize={60} />
-        </BarChart>
-    </ChartContainer>
+            dataKey="Total Utang"
+            nameKey="name"
+            innerRadius="60%"
+            strokeWidth={2}
+          >
+            {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color} className="focus:outline-none" />
+            ))}
+          </Pie>
+           <ChartLegend
+            content={<ChartLegendContent nameKey="name" />}
+            className="-translate-y-2 flex-wrap justify-center"
+          />
+        </PieChart>
+      </ChartContainer>
     </div>
-  );
+  )
 }
