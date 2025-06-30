@@ -49,7 +49,7 @@ export function PaymentHistoryDialog({ card, transactions, open, onOpenChange }:
                     {paymentTransactions.map((transaction) => (
                         <TableRow key={transaction.id}>
                         <TableCell>
-                            {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(transaction.date))}
+                            {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(transaction.date))}
                         </TableCell>
                         <TableCell>{transaction.description}</TableCell>
                         <TableCell className="text-right font-medium text-green-600">

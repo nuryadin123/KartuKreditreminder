@@ -243,7 +243,7 @@ export default function CardsPage() {
                 {nextReminderDate ? (
                     <div className="flex justify-between items-baseline">
                         <span className="text-sm text-muted-foreground">Pengingat Berikutnya</span>
-                        <span className="font-semibold">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(nextReminderDate)}</span>
+                        <span className="font-semibold">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(nextReminderDate)}</span>
                     </div>
                 ) : (
                     <div className="flex justify-between items-baseline">

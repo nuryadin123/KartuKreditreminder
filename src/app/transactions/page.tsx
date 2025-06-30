@@ -187,7 +187,7 @@ export default function TransactionsPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(transaction.date))}
+                        {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(transaction.date))}
                       </TableCell>
                       <TableCell>{getCardName(transaction.cardId)}</TableCell>
                       <TableCell className="font-medium">{transaction.description}</TableCell>
