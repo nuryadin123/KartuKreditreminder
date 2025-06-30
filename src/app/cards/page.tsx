@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +36,7 @@ import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog";
+import { Progress } from "@/components/ui/progress";
 
 
 export default function CardsPage() {
@@ -49,6 +50,21 @@ export default function CardsPage() {
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
+
+  const cardDebts = useMemo(() => {
+    const debts = new Map<string, number>();
+    cards.forEach(card => {
+        const cardSpending = transactions
+            .filter(t => t.cardId === card.id && t.category !== 'Pembayaran')
+            .reduce((sum, t) => sum + t.amount, 0);
+        const cardPayments = transactions
+            .filter(t => t.cardId === card.id && t.category === 'Pembayaran')
+            .reduce((sum, t) => sum + t.amount, 0);
+        const debt = cardSpending - cardPayments;
+        debts.set(card.id, debt > 0 ? debt : 0);
+    });
+    return debts;
+  }, [cards, transactions]);
 
   const handleOpenForm = (card: CreditCard | null = null) => {
     setSelectedCard(card);
@@ -137,7 +153,12 @@ export default function CardsPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {cards.map(card => (
+          {cards.map(card => {
+            const debt = cardDebts.get(card.id) || 0;
+            const availableCredit = card.creditLimit - debt;
+            const debtPercentage = card.creditLimit > 0 ? (debt / card.creditLimit) * 100 : 0;
+            
+            return (
             <Card key={card.id} className="flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -172,9 +193,16 @@ export default function CardsPage() {
                 </div>
               </CardHeader>
               <CardContent className="flex-grow space-y-4">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-muted-foreground">Limit Kredit</span>
-                  <span className="font-semibold">{formatCurrency(card.creditLimit)}</span>
+                <div className="space-y-2">
+                    <div className="flex justify-between items-baseline">
+                        <span className="text-sm text-muted-foreground">Sisa Utang</span>
+                        <span className="font-semibold text-destructive">{formatCurrency(debt)}</span>
+                    </div>
+                    <Progress value={debtPercentage} aria-label={`${debtPercentage.toFixed(2)}% used`} />
+                    <div className="flex justify-between items-baseline text-sm text-muted-foreground">
+                        <span>Limit: {formatCurrency(card.creditLimit)}</span>
+                        <span>Tersedia: {formatCurrency(availableCredit)}</span>
+                    </div>
                 </div>
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm text-muted-foreground">Jatuh Tempo</span>
@@ -192,7 +220,7 @@ export default function CardsPage() {
                 </Button>
               </CardFooter>
             </Card>
-          ))}
+          )})}
         </div>
         {cards.length === 0 && (
             <div className="text-center py-10 text-muted-foreground col-span-full border-2 border-dashed rounded-lg">
