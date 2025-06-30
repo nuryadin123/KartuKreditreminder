@@ -58,13 +58,13 @@ export default function CardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCards = useMemo(() => {
-    if (!searchQuery) {
-        return cards;
-    }
-    return cards.filter(card => 
+    return cards
+      .filter(card => 
+        !searchQuery ||
         card.cardName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         card.bankName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+      )
+      .sort((a, b) => b.creditLimit - a.creditLimit);
   }, [cards, searchQuery]);
 
   const cardDebts = useMemo(() => {
