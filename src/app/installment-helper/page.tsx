@@ -59,7 +59,7 @@ export default function InstallmentHelperPage() {
     if (selectedCard) {
       form.setValue("interestRate", selectedCard.interestRate, { shouldValidate: true });
     } else {
-       form.setValue("interestRate", undefined, { shouldValidate: true });
+       form.setValue("interestRate", undefined as any, { shouldValidate: true });
     }
   };
 
