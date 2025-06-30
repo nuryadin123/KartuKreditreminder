@@ -6,7 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -32,7 +31,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2, CheckCircle2, CircleSlash } from "lucide-react";
 import type { Transaction, CreditCard } from "@/types";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { useToast } from "@/hooks/use-toast";
@@ -59,12 +58,13 @@ export default function TransactionsPage() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, filterCard, filterStatus]);
 
-  const handleStatusChange = async (transactionId: string, checked: boolean | 'indeterminate') => {
+  const handleStatusChange = async (transactionId: string, isPaid: boolean) => {
     const transactionRef = doc(db, 'transactions', transactionId);
     try {
         await updateDoc(transactionRef, {
-            status: checked ? 'lunas' : 'belum lunas'
+            status: isPaid ? 'lunas' : 'belum lunas'
         });
+        toast({ title: "Status Diperbarui", description: "Status transaksi telah berhasil diperbarui." });
     } catch (error) {
         console.error("Error updating status: ", error);
         toast({ title: "Gagal Memperbarui", description: "Terjadi kesalahan saat memperbarui status.", variant: "destructive" });
@@ -186,7 +186,6 @@ export default function TransactionsPage() {
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[50px]">Lunas</TableHead>
                         <TableHead>Tanggal</TableHead>
                         <TableHead>Kartu</TableHead>
                         <TableHead>Deskripsi</TableHead>
@@ -199,15 +198,6 @@ export default function TransactionsPage() {
                     <TableBody>
                     {filteredTransactions.map((transaction) => (
                         <TableRow key={transaction.id}>
-                        <TableCell>
-                            {transaction.category !== 'Pembayaran' && (
-                                <Checkbox
-                                checked={transaction.status === 'lunas'}
-                                onCheckedChange={(checked) => handleStatusChange(transaction.id, checked)}
-                                aria-label={`Mark ${transaction.description} as paid`}
-                                />
-                            )}
-                        </TableCell>
                         <TableCell>
                             {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(transaction.date))}
                         </TableCell>
@@ -247,6 +237,21 @@ export default function TransactionsPage() {
                                         <Edit className="mr-2 h-4 w-4"/>
                                         Edit
                                     </DropdownMenuItem>
+                                    {transaction.category !== 'Pembayaran' && (
+                                        <DropdownMenuItem onClick={() => handleStatusChange(transaction.id, transaction.status !== 'lunas')}>
+                                            {transaction.status === 'lunas' ? (
+                                                <>
+                                                    <CircleSlash className="mr-2 h-4 w-4"/>
+                                                    <span>Tandai Belum Lunas</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 className="mr-2 h-4 w-4"/>
+                                                    <span>Tandai Lunas</span>
+                                                </>
+                                            )}
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem onClick={() => handleOpenDeleteAlert(transaction)} className="text-destructive focus:text-destructive">
                                         <Trash2 className="mr-2 h-4 w-4"/>
                                         Hapus
