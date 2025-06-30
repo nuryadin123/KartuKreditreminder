@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -143,6 +144,11 @@ export default function Home() {
   }, [cards, chartData, loadingCards, loadingTransactions, notificationsShown, toast, notificationPermission]);
 
   const isLoading = loadingCards || loadingTransactions;
+  
+  const filteredChartData = useMemo(() => {
+    return chartData.filter(d => d['Total Utang'] > 0);
+  }, [chartData]);
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -225,8 +231,8 @@ export default function Home() {
                     <CardDescription>Visualisasi total utang per kartu kredit.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {chartData.filter(d => d['Total Utang'] > 0).length > 0 ? (
-                        <DebtChart data={chartData} />
+                    {filteredChartData.length > 0 ? (
+                        <DebtChart data={filteredChartData} />
                     ) : (
                         <div className="flex h-80 items-center justify-center">
                             <p className="text-muted-foreground">Tidak ada data utang untuk ditampilkan.</p>
