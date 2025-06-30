@@ -45,7 +45,6 @@ export default function RegisterPage() {
         description: error.message || 'Terjadi kesalahan. Silakan coba lagi.',
         variant: 'destructive',
       });
-      console.error(error);
     } finally {
       setIsSubmitting(false);
     }

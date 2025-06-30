@@ -45,7 +45,6 @@ export default function LoginPage() {
         description: 'Email atau password salah. Silakan coba lagi.',
         variant: 'destructive',
       });
-      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
