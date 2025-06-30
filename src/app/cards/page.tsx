@@ -29,12 +29,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { mockCards as initialCards, mockTransactions as initialTransactions } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm } from "@/components/cards/card-form";
 import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog";
 
 
 export default function CardsPage() {
@@ -44,6 +45,7 @@ export default function CardsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
@@ -76,6 +78,11 @@ export default function CardsPage() {
   const handleClosePaymentDialog = () => {
     setSelectedCard(null);
     setIsPaymentDialogOpen(false);
+  };
+  
+  const handleOpenPaymentHistory = (card: CreditCard) => {
+    setSelectedCard(card);
+    setIsPaymentHistoryOpen(true);
   };
 
   const handleSubmit = (values: Omit<CreditCard, "id">) => {
@@ -148,6 +155,10 @@ export default function CardsPage() {
                             <DropdownMenuItem onClick={() => handleOpenForm(card)}>
                                 <Edit className="mr-2 h-4 w-4"/>
                                 Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenPaymentHistory(card)}>
+                                <History className="mr-2 h-4 w-4"/>
+                                Riwayat Pembayaran
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenDeleteAlert(card)} className="text-destructive focus:text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4"/>
@@ -227,6 +238,13 @@ export default function CardsPage() {
         open={isPaymentDialogOpen}
         onOpenChange={setIsPaymentDialogOpen}
         onSubmit={handlePayment}
+      />
+
+      <PaymentHistoryDialog
+        card={selectedCard}
+        transactions={transactions}
+        open={isPaymentHistoryOpen}
+        onOpenChange={setIsPaymentHistoryOpen}
       />
     </>
   );
