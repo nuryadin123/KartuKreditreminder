@@ -31,15 +31,18 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { mockCards, mockTransactions as initialTransactions } from "@/lib/mock-data";
+import { mockCards as initialCards, mockTransactions as initialTransactions } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import type { Transaction, CreditCard } from "@/types";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("kredit-track-transactions", initialTransactions);
+  const [cards] = useLocalStorage<CreditCard[]>("kredit-track-cards", initialCards);
+
   const [filterCard, setFilterCard] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   
@@ -51,20 +54,20 @@ export default function TransactionsPage() {
   const filteredTransactions = useMemo(() => {
     return transactions
       .filter(t => filterCard === 'all' || t.cardId === filterCard)
-      .filter(t => filterStatus === 'all' || t.status === filterStatus)
+      .filter(t => filterStatus === 'all' || (t.category === 'Pembayaran' ? t.status === 'lunas' : t.status === filterStatus))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, filterCard, filterStatus]);
 
   const handleStatusChange = (transactionId: string, checked: boolean | 'indeterminate') => {
-    setTransactions(prev =>
-      prev.map(t =>
+    setTransactions(
+      transactions.map(t =>
         t.id === transactionId ? { ...t, status: checked ? 'lunas' : 'belum lunas' } : t
       )
     );
   };
   
   const getCardName = (cardId: string) => {
-    return mockCards.find(c => c.id === cardId)?.cardName || 'Unknown Card';
+    return cards.find(c => c.id === cardId)?.cardName || 'Unknown Card';
   }
 
   const handleOpenForm = (transaction: Transaction | null = null) => {
@@ -93,11 +96,9 @@ export default function TransactionsPage() {
         date: values.date.toISOString(),
     }
     if (selectedTransaction) {
-      // Update
       setTransactions(transactions.map(t => t.id === selectedTransaction.id ? { ...selectedTransaction, ...transactionData } : t));
       toast({ title: "Transaksi Diperbarui", description: "Data transaksi berhasil diperbarui." });
     } else {
-      // Create
       const newTransaction: Transaction = { 
           id: `txn-${Date.now()}`,
           status: 'belum lunas', 
@@ -137,7 +138,7 @@ export default function TransactionsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Semua Kartu</SelectItem>
-                    {mockCards.map(card => (
+                    {cards.map(card => (
                       <SelectItem key={card.id} value={card.id}>{card.cardName}</SelectItem>
                     ))}
                   </SelectContent>
@@ -154,7 +155,7 @@ export default function TransactionsPage() {
                 </Select>
                 <Button onClick={() => handleOpenForm()}>
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Tambah Transaksi
+                  Tambah
                 </Button>
               </div>
             </div>
@@ -182,6 +183,7 @@ export default function TransactionsPage() {
                           checked={transaction.status === 'lunas'}
                           onCheckedChange={(checked) => handleStatusChange(transaction.id, checked)}
                           aria-label={`Mark ${transaction.description} as paid`}
+                          disabled={transaction.category === 'Pembayaran'}
                         />
                       </TableCell>
                       <TableCell>
@@ -190,9 +192,11 @@ export default function TransactionsPage() {
                       <TableCell>{getCardName(transaction.cardId)}</TableCell>
                       <TableCell className="font-medium">{transaction.description}</TableCell>
                       <TableCell>
-                          <Badge variant="secondary">{transaction.category}</Badge>
+                          <Badge variant={transaction.category === 'Pembayaran' ? 'default' : 'secondary'}>{transaction.category}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(transaction.amount)}</TableCell>
+                      <TableCell className={cn("text-right", transaction.category === 'Pembayaran' && 'text-green-600')}>
+                        {transaction.category === 'Pembayaran' ? `+${formatCurrency(transaction.amount)}` : formatCurrency(transaction.amount)}
+                      </TableCell>
                       <TableCell className="text-center">
                         <Badge variant={transaction.status === 'lunas' ? 'default' : 'destructive'} className={cn(transaction.status === 'lunas' ? 'bg-green-500/20 text-green-700 border-green-500/30' : 'bg-destructive/10 text-destructive border-destructive/20', 'capitalize')}>
                           {transaction.status}
@@ -206,7 +210,7 @@ export default function TransactionsPage() {
                                   </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleOpenForm(transaction)}>
+                                  <DropdownMenuItem onClick={() => handleOpenForm(transaction)} disabled={transaction.category === 'Pembayaran'}>
                                       <Edit className="mr-2 h-4 w-4"/>
                                       Edit
                                   </DropdownMenuItem>
@@ -222,7 +226,7 @@ export default function TransactionsPage() {
                 </TableBody>
               </Table>
               {filteredTransactions.length === 0 && (
-                  <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg mt-4">
                       <h3 className="text-lg font-medium">Tidak ada transaksi</h3>
                       <p className="text-sm">Tidak ada transaksi yang cocok dengan filter Anda.</p>
                   </div>
@@ -243,7 +247,7 @@ export default function TransactionsPage() {
           <TransactionForm
             onSubmit={handleSubmit}
             onCancel={handleCloseForm}
-            cards={mockCards}
+            cards={cards}
             defaultValues={selectedTransaction || undefined}
           />
         </DialogContent>

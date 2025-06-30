@@ -27,18 +27,24 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { mockCards as initialCards } from "@/lib/mock-data";
+import { mockCards as initialCards, mockTransactions as initialTransactions } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import type { CreditCard } from "@/types";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark } from "lucide-react";
+import type { CreditCard, Transaction } from "@/types";
 import { CardForm } from "@/components/cards/card-form";
+import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 
 export default function CardsPage() {
-  const [cards, setCards] = useState<CreditCard[]>(initialCards);
+  const [cards, setCards] = useLocalStorage<CreditCard[]>("kredit-track-cards", initialCards);
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("kredit-track-transactions", initialTransactions);
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
 
@@ -61,14 +67,22 @@ export default function CardsPage() {
     setSelectedCard(null);
     setIsDeleteAlertOpen(false);
   };
+  
+  const handleOpenPaymentDialog = (card: CreditCard) => {
+    setSelectedCard(card);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handleClosePaymentDialog = () => {
+    setSelectedCard(null);
+    setIsPaymentDialogOpen(false);
+  };
 
   const handleSubmit = (values: Omit<CreditCard, "id">) => {
     if (selectedCard) {
-      // Update
       setCards(cards.map(c => c.id === selectedCard.id ? { ...c, ...values } : c));
       toast({ title: "Kartu Diperbarui", description: "Data kartu kredit berhasil diperbarui." });
     } else {
-      // Create
       const newCard: CreditCard = { id: `card-${Date.now()}`, ...values };
       setCards([...cards, newCard]);
       toast({ title: "Kartu Ditambahkan", description: "Kartu kredit baru berhasil ditambahkan." });
@@ -81,6 +95,23 @@ export default function CardsPage() {
         setCards(cards.filter(c => c.id !== selectedCard.id));
         toast({ title: "Kartu Dihapus", description: "Data kartu kredit berhasil dihapus.", variant: 'destructive' });
         handleCloseDeleteAlert();
+    }
+  };
+
+  const handlePayment = ({ amount }: { amount: number }) => {
+    if (selectedCard) {
+      const newPayment: Transaction = {
+        id: `txn-${Date.now()}`,
+        cardId: selectedCard.id,
+        date: new Date().toISOString(),
+        description: `Pembayaran Kartu Kredit`,
+        amount: amount,
+        category: 'Pembayaran',
+        status: 'lunas',
+      };
+      setTransactions([...transactions, newPayment]);
+      toast({ title: "Pembayaran Berhasil", description: `Pembayaran sebesar ${formatCurrency(amount)} telah dicatat.` });
+      handleClosePaymentDialog();
     }
   };
 
@@ -144,7 +175,10 @@ export default function CardsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">Lihat Transaksi</Button>
+                <Button onClick={() => handleOpenPaymentDialog(card)} className="w-full">
+                  <Landmark className="mr-2 h-4 w-4" />
+                  Lakukan Pembayaran
+                </Button>
               </CardFooter>
             </Card>
           ))}
@@ -187,6 +221,13 @@ export default function CardsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PaymentDialog
+        card={selectedCard}
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
+        onSubmit={handlePayment}
+      />
     </>
   );
 }

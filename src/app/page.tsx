@@ -2,16 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockCards, mockTransactions } from "@/lib/mock-data";
+import { mockCards as initialCards, mockTransactions as initialTransactions } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
 import { CreditCard, DollarSign, Calendar } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
-import type { CreditCard as CreditCardType } from "@/types";
+import type { CreditCard as CreditCardType, Transaction } from "@/types";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export default function Home() {
+  const [cards] = useLocalStorage<CreditCardType[]>("kredit-track-cards", initialCards);
+  const [transactions] = useLocalStorage<Transaction[]>("kredit-track-transactions", initialTransactions);
   const [upcomingDueDate, setUpcomingDueDate] = useState<Date | null>(null);
 
   useEffect(() => {
+    if (cards.length === 0) return;
+    
     const getNextDueDate = (card: CreditCardType) => {
       const today = new Date();
       let dueDate = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
@@ -21,23 +26,37 @@ export default function Home() {
       return dueDate;
     };
 
-    const nextDueDate = mockCards
+    const nextDueDate = cards
       .map(getNextDueDate)
       .sort((a, b) => a.getTime() - b.getTime())[0];
     
     setUpcomingDueDate(nextDueDate || null);
-  }, []);
+  }, [cards]);
 
-  const totalDebt = mockTransactions
-    .filter((t) => t.status === 'unpaid')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const { totalDebt, chartData } = (() => {
+    const spending = transactions
+        .filter(t => t.category !== 'Pembayaran')
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  const chartData = mockCards.map(card => {
-    const debt = mockTransactions
-      .filter(t => t.cardId === card.id && t.status === 'unpaid')
-      .reduce((sum, t) => sum + t.amount, 0);
-    return { name: card.cardName, "Total Utang": debt };
-  });
+    const payments = transactions
+        .filter(t => t.category === 'Pembayaran')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalDebt = spending - payments;
+
+    const chartData = cards.map(card => {
+        const cardSpending = transactions
+            .filter(t => t.cardId === card.id && t.category !== 'Pembayaran')
+            .reduce((sum, t) => sum + t.amount, 0);
+        const cardPayments = transactions
+            .filter(t => t.cardId === card.id && t.category === 'Pembayaran')
+            .reduce((sum, t) => sum + t.amount, 0);
+        const debt = cardSpending - cardPayments;
+        return { name: card.cardName, "Total Utang": debt > 0 ? debt : 0 };
+    });
+
+    return { totalDebt, chartData };
+  })();
 
   return (
     <div className="flex flex-col gap-8">
@@ -63,7 +82,7 @@ export default function Home() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockCards.length}</div>
+            <div className="text-2xl font-bold">{cards.length}</div>
             <p className="text-xs text-muted-foreground">Total kartu kredit terdaftar</p>
           </CardContent>
         </Card>
@@ -74,7 +93,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'Memuat...'}
+              {upcomingDueDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long' }).format(upcomingDueDate) : 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
               Tanggal jatuh tempo terdekat

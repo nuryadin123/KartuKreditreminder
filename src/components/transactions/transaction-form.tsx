@@ -28,7 +28,7 @@ const formSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah harus lebih dari 0."),
   date: z.date({ required_error: "Tanggal harus diisi." }),
   cardId: z.string({ required_error: "Silakan pilih kartu kredit." }),
-  category: z.enum(['Belanja', 'Makanan', 'Transportasi', 'Hiburan', 'Lainnya'], {
+  category: z.enum(['Belanja', 'Makanan', 'Transportasi', 'Hiburan', 'Lainnya', 'Pembayaran'], {
     required_error: "Silakan pilih kategori.",
   }),
 });

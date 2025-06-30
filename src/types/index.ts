@@ -9,11 +9,11 @@ export interface CreditCard {
 }
 
 export interface Transaction {
-  id: string;
+  id:string;
   cardId: string;
   date: string; // ISO date string
   description: string;
   amount: number;
-  category: 'Belanja' | 'Makanan' | 'Transportasi' | 'Hiburan' | 'Lainnya';
+  category: 'Belanja' | 'Makanan' | 'Transportasi' | 'Hiburan' | 'Lainnya' | 'Pembayaran';
   status: 'lunas' | 'belum lunas';
 }
