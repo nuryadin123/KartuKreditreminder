@@ -15,7 +15,7 @@ const GenerateReminderEmailInputSchema = z.object({
   cardName: z.string().describe('The name of the credit card.'),
   bankName: z.string().describe('The name of the bank.'),
   dueDate: z.string().describe('The due date of the payment in a user-friendly format (e.g., "30 Juni 2024").'),
-  amountDue: z.number().describe('The total amount due.'),
+  amountDue: z.string().describe('The total amount due, pre-formatted as a currency string (e.g., "Rp 500.000").'),
   recipientName: z.string().describe("The name of the card holder."),
 });
 export type GenerateReminderEmailInput = z.infer<typeof GenerateReminderEmailInputSchema>;
@@ -41,7 +41,7 @@ Use the following details:
 
 Generate a JSON object with a "subject" and "body".
 - The subject should be concise, like "Pengingat Pembayaran Kartu Kredit {{{cardName}}}".
-- The body should be a simple HTML paragraph. It should be warm and direct, reminding the user of the upcoming payment. Mention the amount and the due date clearly. For example: "Halo {{{recipientName}}}, ini adalah pengingat bahwa tagihan kartu kredit {{{cardName}}} Anda sebesar [format currency for amountDue] akan jatuh tempo pada {{{dueDate}}}. Mohon segera lakukan pembayaran untuk menghindari denda."
+- The body should be a simple HTML paragraph. It should be warm and direct, reminding the user of the upcoming payment. Mention the amount and the due date clearly. For example: "Halo {{{recipientName}}}, ini adalah pengingat bahwa tagihan kartu kredit {{{cardName}}} Anda sebesar {{{amountDue}}} akan jatuh tempo pada {{{dueDate}}}. Mohon segera lakukan pembayaran untuk menghindari denda."
 `,
 });
 
