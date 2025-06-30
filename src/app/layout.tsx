@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
 import { ProtectedLayout } from '@/components/layout/protected-layout';
+import { ThemeProvider } from '@/context/theme-provider';
 
 export const metadata: Metadata = {
   title: 'KARTUMU',
@@ -26,12 +27,17 @@ export default function RootLayout({
         ></link>
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-            <ProtectedLayout>
-              {children}
-            </ProtectedLayout>
-        </AuthProvider>
-        <Toaster />
+        <ThemeProvider
+          defaultTheme="system"
+          storageKey="kartumu-ui-theme"
+        >
+          <AuthProvider>
+              <ProtectedLayout>
+                {children}
+              </ProtectedLayout>
+          </AuthProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
