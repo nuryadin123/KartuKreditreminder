@@ -4,6 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format } from "date-fns";
 import type { CreditCard } from "@/types";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 
 const formSchema = z.object({
   bankName: z.string().min(2, "Nama bank minimal 2 karakter."),
@@ -27,9 +33,10 @@ const formSchema = z.object({
   dueDate: z.coerce.number().min(1, "Tanggal jatuh tempo harus antara 1 dan 31.").max(31),
   interestRate: z.coerce.number().min(0, "Suku bunga harus angka positif."),
   limitIncreaseReminder: z.enum(['tidak', '3-bulan', '6-bulan']).optional().default('tidak'),
+  lastLimitIncreaseDate: z.date().optional(),
 });
 
-type CardFormValues = z.infer<typeof formSchema>;
+export type CardFormValues = z.infer<typeof formSchema>;
 
 interface CardFormProps {
   onSubmit: (values: CardFormValues) => void;
@@ -50,8 +57,11 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
       dueDate: defaultValues?.dueDate || 1,
       interestRate: defaultValues?.interestRate || 1.75,
       limitIncreaseReminder: defaultValues?.limitIncreaseReminder || 'tidak',
+      lastLimitIncreaseDate: defaultValues?.lastLimitIncreaseDate ? new Date(defaultValues.lastLimitIncreaseDate) : undefined,
     },
   });
+
+  const reminderType = form.watch("limitIncreaseReminder");
 
   return (
     <Form {...form}>
@@ -193,6 +203,49 @@ export function CardForm({ onSubmit, onCancel, defaultValues, isSubmitting }: Ca
             </FormItem>
             )}
         />
+        {reminderType !== 'tidak' && (
+             <FormField
+                control={form.control}
+                name="lastLimitIncreaseDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel className='mb-2'>Tanggal Terakhir Naik Limit</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                            )}
+                            >
+                            {field.value ? (
+                                format(field.value, "d MMMM yyyy")
+                            ) : (
+                                <span>Pilih tanggal</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        )}
         <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                 Batal

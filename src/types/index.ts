@@ -8,6 +8,7 @@ export interface CreditCard {
   interestRate: number;
   last4Digits: string;
   limitIncreaseReminder?: '3-bulan' | '6-bulan' | 'tidak';
+  lastLimitIncreaseDate?: string; // ISO date string
 }
 
 export interface Transaction {

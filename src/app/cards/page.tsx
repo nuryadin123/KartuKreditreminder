@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { addMonths } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +32,7 @@ import { mockCards as initialCards, mockTransactions as initialTransactions } fr
 import { formatCurrency } from "@/lib/utils";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
-import { CardForm } from "@/components/cards/card-form";
+import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -101,12 +102,21 @@ export default function CardsPage() {
     setIsPaymentHistoryOpen(true);
   };
 
-  const handleSubmit = (values: Omit<CreditCard, "id">) => {
+  const handleSubmit = (values: CardFormValues) => {
+    const cardData = {
+        ...values,
+        lastLimitIncreaseDate: values.lastLimitIncreaseDate?.toISOString()
+    }
     if (selectedCard) {
-      setCards(cards.map(c => c.id === selectedCard.id ? { ...c, ...values } : c));
+      setCards(cards.map(c => c.id === selectedCard.id ? { ...c, ...cardData } : c));
       toast({ title: "Kartu Diperbarui", description: "Data kartu kredit berhasil diperbarui." });
     } else {
-      const newCard: CreditCard = { id: `card-${Date.now()}`, ...values };
+      const newCard: CreditCard = { 
+        id: `card-${Date.now()}`,
+        ...cardData,
+        // Ensure lastLimitIncreaseDate is a string or undefined
+        lastLimitIncreaseDate: cardData.lastLimitIncreaseDate
+      };
       setCards([...cards, newCard]);
       toast({ title: "Kartu Ditambahkan", description: "Kartu kredit baru berhasil ditambahkan." });
     }
@@ -137,6 +147,15 @@ export default function CardsPage() {
       handleClosePaymentDialog();
     }
   };
+  
+  const getNextReminderDate = (card: CreditCard): Date | null => {
+    if (!card.limitIncreaseReminder || card.limitIncreaseReminder === 'tidak' || !card.lastLimitIncreaseDate) {
+        return null;
+    }
+    const lastDate = new Date(card.lastLimitIncreaseDate);
+    const monthsToAdd = card.limitIncreaseReminder === '3-bulan' ? 3 : 6;
+    return addMonths(lastDate, monthsToAdd);
+  };
 
   return (
     <>
@@ -157,6 +176,7 @@ export default function CardsPage() {
             const debt = cardDebts.get(card.id) || 0;
             const availableCredit = card.creditLimit - debt;
             const debtPercentage = card.creditLimit > 0 ? ((debt > 0 ? debt : 0) / card.creditLimit) * 100 : 0;
+            const nextReminderDate = getNextReminderDate(card);
             
             return (
             <Card key={card.id} className="flex flex-col">
@@ -220,14 +240,17 @@ export default function CardsPage() {
                   <span className="text-sm text-muted-foreground">Suku Bunga</span>
                   <span className="font-semibold">{card.interestRate}% / bulan</span>
                 </div>
-                <div className="flex justify-between items-baseline">
-                    <span className="text-sm text-muted-foreground">Pengingat Limit</span>
-                    <span className="font-semibold capitalize">
-                        {card.limitIncreaseReminder === 'tidak' || !card.limitIncreaseReminder
-                            ? 'Tidak Aktif'
-                            : `Per ${card.limitIncreaseReminder.replace('-', ' ')}`}
-                    </span>
-                </div>
+                {nextReminderDate ? (
+                    <div className="flex justify-between items-baseline">
+                        <span className="text-sm text-muted-foreground">Pengingat Berikutnya</span>
+                        <span className="font-semibold">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(nextReminderDate)}</span>
+                    </div>
+                ) : (
+                    <div className="flex justify-between items-baseline">
+                        <span className="text-sm text-muted-foreground">Pengingat Limit</span>
+                        <span className="font-semibold">Tidak Aktif</span>
+                    </div>
+                )}
               </CardContent>
               <CardFooter>
                 <Button onClick={() => handleOpenPaymentDialog(card)} className="w-full">
