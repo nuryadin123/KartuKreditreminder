@@ -200,12 +200,13 @@ export default function TransactionsPage() {
                     {filteredTransactions.map((transaction) => (
                         <TableRow key={transaction.id}>
                         <TableCell>
-                            <Checkbox
-                            checked={transaction.status === 'lunas'}
-                            onCheckedChange={(checked) => handleStatusChange(transaction.id, checked)}
-                            aria-label={`Mark ${transaction.description} as paid`}
-                            disabled={transaction.category === 'Pembayaran'}
-                            />
+                            {transaction.category !== 'Pembayaran' && (
+                                <Checkbox
+                                checked={transaction.status === 'lunas'}
+                                onCheckedChange={(checked) => handleStatusChange(transaction.id, checked)}
+                                aria-label={`Mark ${transaction.description} as paid`}
+                                />
+                            )}
                         </TableCell>
                         <TableCell>
                             {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(transaction.date))}
