@@ -40,7 +40,7 @@ export default function InstallmentHelperPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       transactionAmount: undefined,
-      cardId: "",
+      cardId: "no-card",
       interestRate: undefined,
       tenor: "",
     },
@@ -81,7 +81,7 @@ export default function InstallmentHelperPage() {
 
   const handleApplyInstallment = () => {
     const formValues = form.getValues();
-    if (!plan || !formValues.cardId) {
+    if (!plan || !formValues.cardId || formValues.cardId === 'no-card') {
       toast({
         title: "Gagal Menerapkan Cicilan",
         description: "Harap pilih kartu dan jalankan simulasi terlebih dahulu.",
@@ -109,6 +109,8 @@ export default function InstallmentHelperPage() {
 
     setPlan(null); // Reset the view after applying
   };
+
+  const selectedCardId = form.watch("cardId");
 
 
   return (
@@ -177,7 +179,7 @@ export default function InstallmentHelperPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Jangan gunakan kartu</SelectItem>
+                          <SelectItem value="no-card">Jangan gunakan kartu</SelectItem>
                           {cards.map(card => (
                             <SelectItem key={card.id} value={card.id}>
                               {card.cardName}
@@ -304,7 +306,7 @@ export default function InstallmentHelperPage() {
                     </div>
                 </div>
             </CardContent>
-            {form.getValues("cardId") && (
+            {selectedCardId && selectedCardId !== 'no-card' && (
                 <CardFooter>
                     <Button onClick={handleApplyInstallment} className="w-full">
                         <PlusCircle className="mr-2 h-4 w-4" />
