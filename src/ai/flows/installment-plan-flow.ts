@@ -16,6 +16,8 @@ const InstallmentPlanInputSchema = z.object({
   interestRate: z.number().describe('The annual interest rate of the credit card (as a percentage, e.g., 21 for 21%).'),
   tenor: z.number().int().min(1).describe('The desired number of months for the installment plan (tenor).'),
   bankName: z.string().optional().describe('The name of the bank for providing contextual advice on the interest rate.'),
+  adminFeeBank: z.number().optional().describe('Optional bank administration fee.'),
+  adminFeeMarketplace: z.number().optional().describe('Optional marketplace administration fee.'),
 });
 export type InstallmentPlanInput = z.infer<typeof InstallmentPlanInputSchema>;
 
@@ -42,21 +44,24 @@ const prompt = ai.definePrompt({
     prompt: `You are an expert financial advisor specializing in credit card debt management in Indonesia. A user wants to convert a transaction into an installment plan using a **flat interest rate** calculation.
 
 Transaction Details:
-- Amount (Principal): {{{transactionAmount}}} IDR
+- Transaction Amount: {{{transactionAmount}}} IDR
+{{#if adminFeeBank}}- Bank Admin Fee: {{{adminFeeBank}}} IDR{{/if}}
+{{#if adminFeeMarketplace}}- Marketplace Admin Fee: {{{adminFeeMarketplace}}} IDR{{/if}}
 - Annual Interest Rate: {{{interestRate}}}%
 - Tenor: {{{tenor}}} months
 {{#if bankName}}- Bank: {{{bankName}}}{{/if}}
 
 Your tasks are:
-1.  **Calculate Total Interest (Flat):** Calculate the total interest for the entire period. Formula: Total Interest = Principal * (Annual Interest Rate / 100) * (Tenor in months / 12).
-2.  **Calculate Total Payment:** Total Payment = Principal + Total Interest.
-3.  **Calculate Monthly Installment:** Monthly Installment = Total Payment / Tenor. Round this to the nearest whole number.
-4.  **Generate a month-by-month amortization schedule:** For each month, calculate the components of the installment.
-    - **Monthly Principal:** This is constant. Formula: Principal / Tenor.
+1.  **Calculate Total Principal:** The total principal is the sum of the transaction amount and any admin fees. Total Principal = Transaction Amount + (Admin Fee Bank or 0) + (Admin Fee Marketplace or 0).
+2.  **Calculate Total Interest (Flat):** Calculate the total interest for the entire period based on the **Total Principal**. Formula: Total Interest = Total Principal * (Annual Interest Rate / 100) * (Tenor in months / 12).
+3.  **Calculate Total Payment:** Total Payment = Total Principal + Total Interest.
+4.  **Calculate Monthly Installment:** Monthly Installment = Total Payment / Tenor. Round this to the nearest whole number.
+5.  **Generate a month-by-month amortization schedule:** For each month, calculate the components of the installment.
+    - **Monthly Principal:** This is constant. Formula: Total Principal / Tenor.
     - **Monthly Interest:** This is also constant. Formula: Total Interest / Tenor.
-    - **Remaining Balance:** This decreases each month. For month \`m\`, the Remaining Balance = Principal - (Monthly Principal * \`m\`).
-5.  **Provide a brief, insightful piece of financial advice** based on the calculation. The advice must be in Indonesian and easy to understand.
-    - Explain that this is a **flat interest** calculation. Mention that while it's simple, the *effective interest rate* is often higher than it appears compared to annuity/effective rate calculations, especially for longer tenors.
+    - **Remaining Balance:** This decreases each month. For month \`m\`, the Remaining Balance = Total Principal - (Monthly Principal * \`m\`).
+6.  **Provide a brief, insightful piece of financial advice** based on the calculation. The advice must be in Indonesian and easy to understand.
+    - Explain that this is a **flat interest** calculation and mention that admin fees are included in the principal. Mention that while it's simple, the *effective interest rate* is often higher than it appears.
     {{#if bankName}}
     - Critically evaluate the provided annual interest rate ({{{interestRate}}}%). Compare it to typical credit card *flat* interest rates for {{bankName}} in Indonesia. State whether the user's rate is competitive, average, or high. For example: "Untuk perhitungan bunga flat, suku bunga tahunan {{interestRate}}% termasuk kompetitif untuk bank {{bankName}}."
     {{else}}

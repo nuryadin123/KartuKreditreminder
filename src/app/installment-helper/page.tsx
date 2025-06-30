@@ -23,6 +23,8 @@ import { addDoc, collection } from "firebase/firestore";
 
 const formSchema = z.object({
   transactionAmount: z.coerce.number().min(100000, "Jumlah minimal Rp 100.000."),
+  adminFeeBank: z.coerce.number().optional(),
+  adminFeeMarketplace: z.coerce.number().optional(),
   cardId: z.string().optional(),
   interestRate: z.coerce.number({ required_error: "Suku bunga harus diisi." }).min(0, "Suku bunga tidak boleh negatif."),
   tenor: z.string({ required_error: "Tenor harus diisi." }),
@@ -41,6 +43,8 @@ export default function InstallmentHelperPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       transactionAmount: undefined,
+      adminFeeBank: undefined,
+      adminFeeMarketplace: undefined,
       cardId: "no-card",
       interestRate: undefined,
       tenor: "",
@@ -70,6 +74,8 @@ export default function InstallmentHelperPage() {
         interestRate: values.interestRate,
         tenor: Number(values.tenor),
         bankName: selectedCard?.bankName,
+        adminFeeBank: values.adminFeeBank,
+        adminFeeMarketplace: values.adminFeeMarketplace,
       });
       setPlan(result);
     } catch (e) {
@@ -91,11 +97,13 @@ export default function InstallmentHelperPage() {
       return;
     }
 
+    const totalPrincipal = (formValues.transactionAmount || 0) + (formValues.adminFeeBank || 0) + (formValues.adminFeeMarketplace || 0);
+
     const newTransaction: Omit<Transaction, 'id'> = {
       cardId: formValues.cardId,
       date: new Date().toISOString(),
-      description: `Cicilan: Transaksi ${formatCurrency(formValues.transactionAmount)} selama ${formValues.tenor} bulan`,
-      amount: formValues.transactionAmount,
+      description: `Cicilan: Transaksi ${formatCurrency(formValues.transactionAmount)} (+ admin) selama ${formValues.tenor} bulan`,
+      amount: totalPrincipal,
       category: 'Lainnya',
       status: 'belum lunas',
       installmentDetails: {
@@ -167,6 +175,34 @@ export default function InstallmentHelperPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="adminFeeBank"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Admin Bank (Opsional)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Contoh: 15000" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="adminFeeMarketplace"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Admin Marketplace (Opsional)</FormLabel>
+                       <FormControl>
+                        <Input type="number" placeholder="Contoh: 10000" {...field} value={field.value || ''} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
