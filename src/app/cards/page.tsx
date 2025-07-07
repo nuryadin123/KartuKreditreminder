@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { addMonths } from "date-fns";
 import * as XLSX from 'xlsx';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog";
 import {
   Drawer,
@@ -32,7 +33,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown, Upload } from "lucide-react";
+import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown, Upload, Download, AlertTriangle } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { PaymentDrawer } from "@/components/cards/payment-drawer";
@@ -46,6 +47,8 @@ import { useAuth } from "@/context/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 const CardDetails = ({ card, nextReminderDate }: { card: CreditCard, nextReminderDate: Date | null }) => {
     return (
@@ -95,6 +98,10 @@ function CardsPageContent() {
   const [sortOption, setSortOption] = useState<string>("available-credit-desc");
   const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [cardsToReview, setCardsToReview] = useState<any[] | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
 
    useEffect(() => {
     if (loadingCards) return;
@@ -255,6 +262,25 @@ function CardsPageContent() {
     const monthsToAdd = card.limitIncreaseReminder === '3-bulan' ? 3 : 6;
     return addMonths(lastDate, monthsToAdd);
   };
+  
+  const handleDownloadSample = () => {
+    const sampleData = [
+      {
+        "Bank Name": "Contoh Bank",
+        "Card Name": "Kartu Platinum",
+        "Last 4 Digits": "1234",
+        "Credit Limit": 50000000,
+        "Current Debt": 1500000,
+        "Billing Date": 20,
+        "Due Date": 15,
+        "Interest Rate": 21,
+      }
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Kartu");
+    XLSX.writeFile(workbook, "Contoh_Impor_Kartu.xlsx");
+  };
 
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) {
@@ -285,60 +311,32 @@ function CardsPageContent() {
             if (missingHeaders.length > 0) {
                  toast({
                     title: "Format Salah",
-                    description: `Kolom berikut tidak ditemukan di file Excel Anda: ${missingHeaders.join(", ")}.`,
+                    description: `Kolom berikut tidak ditemukan: ${missingHeaders.join(", ")}. Silakan unduh file contoh.`,
                     variant: "destructive",
                 });
                 return;
             }
+            
+            const validatedData = json.map(row => {
+              const bankName = String(row["Bank Name"] || '');
+              const cardName = String(row["Card Name"] || '');
+              const creditLimit = Number(row["Credit Limit"] || 0);
+              const last4Digits = String(row["Last 4 Digits"] || '');
+              let error = null;
 
-            toast({ title: "Mengimpor...", description: `Memproses ${json.length} kartu.` });
+              if (!bankName) error = "Nama Bank wajib diisi.";
+              else if (!cardName) error = "Nama Kartu wajib diisi.";
+              else if (!last4Digits || !/^\d{4}$/.test(last4Digits)) error = "4 Digit Terakhir harus berupa 4 angka.";
+              else if (isNaN(creditLimit) || creditLimit <= 0) error = "Limit Kredit harus angka positif.";
 
-            const batch = writeBatch(db);
+              return { ...row, _isValid: !error, _error: error };
+            });
 
-            for (const row of json) {
-                const cardData: Omit<CreditCard, 'id'> = {
-                    userId: user.uid,
-                    bankName: String(row["Bank Name"] || ''),
-                    cardName: String(row["Card Name"] || ''),
-                    last4Digits: String(row["Last 4 Digits"] || '0000').slice(-4),
-                    creditLimit: Number(row["Credit Limit"] || 0),
-                    billingDate: Number(row["Billing Date"] || 1),
-                    dueDate: Number(row["Due Date"] || 15),
-                    interestRate: Number(row["Interest Rate"] || 21),
-                    limitIncreaseReminder: 'tidak'
-                };
-
-                if (!cardData.bankName || !cardData.cardName || isNaN(cardData.creditLimit)) {
-                    console.warn("Melewatkan baris tidak valid:", row);
-                    continue;
-                }
-                
-                const cardRef = doc(collection(db, 'cards'));
-                batch.set(cardRef, cardData);
-
-                const debt = Number(row["Current Debt"] || 0);
-                if (debt > 0) {
-                    const transactionData: Omit<Transaction, 'id'> = {
-                        userId: user.uid,
-                        cardId: cardRef.id,
-                        date: new Date().toISOString(),
-                        description: "Saldo awal dari impor",
-                        amount: debt,
-                        category: 'Lainnya',
-                        status: 'belum lunas'
-                    };
-                    const transactionRef = doc(collection(db, 'transactions'));
-                    batch.set(transactionRef, transactionData);
-                }
-            }
-
-            await batch.commit();
-
-            toast({ title: "Impor Berhasil", description: `${json.length} kartu berhasil ditambahkan.` });
+            setCardsToReview(validatedData);
 
         } catch (error: any) {
-            console.error("Gagal mengimpor file:", error);
-            toast({ title: "Gagal Mengimpor", description: error.message || "Terjadi kesalahan saat memproses file.", variant: "destructive" });
+            console.error("Gagal memproses file:", error);
+            toast({ title: "Gagal Memproses File", description: error.message || "Terjadi kesalahan saat memproses file.", variant: "destructive" });
         } finally {
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
@@ -346,6 +344,69 @@ function CardsPageContent() {
         }
     };
     reader.readAsArrayBuffer(file);
+  };
+  
+  const handleConfirmImport = async () => {
+    if (!user || !cardsToReview) {
+      toast({ title: "Gagal", description: "Tidak ada data untuk diimpor atau pengguna tidak masuk.", variant: "destructive" });
+      return;
+    }
+
+    const validCards = cardsToReview.filter(card => card._isValid);
+
+    if (validCards.length === 0) {
+        toast({ title: "Tidak Ada Data Valid", description: "Tidak ada kartu yang valid untuk diimpor.", variant: "destructive" });
+        return;
+    }
+
+    setIsImporting(true);
+
+    try {
+        toast({ title: "Mengimpor...", description: `Memproses ${validCards.length} kartu.` });
+        
+        const batch = writeBatch(db);
+
+        for (const row of validCards) {
+            const cardData: Omit<CreditCard, 'id'> = {
+                userId: user.uid,
+                bankName: String(row["Bank Name"] || ''),
+                cardName: String(row["Card Name"] || ''),
+                last4Digits: String(row["Last 4 Digits"] || '0000').slice(-4),
+                creditLimit: Number(row["Credit Limit"] || 0),
+                billingDate: Number(row["Billing Date"] || 1),
+                dueDate: Number(row["Due Date"] || 15),
+                interestRate: Number(row["Interest Rate"] || 21),
+                limitIncreaseReminder: 'tidak'
+            };
+
+            const cardRef = doc(collection(db, 'cards'));
+            batch.set(cardRef, cardData);
+
+            const debt = Number(row["Current Debt"] || 0);
+            if (debt > 0) {
+                const transactionData: Omit<Transaction, 'id'> = {
+                    userId: user.uid,
+                    cardId: cardRef.id,
+                    date: new Date().toISOString(),
+                    description: "Saldo awal dari impor",
+                    amount: debt,
+                    category: 'Lainnya',
+                    status: 'belum lunas'
+                };
+                const transactionRef = doc(collection(db, 'transactions'));
+                batch.set(transactionRef, transactionData);
+            }
+        }
+        await batch.commit();
+
+        toast({ title: "Impor Berhasil", description: `${validCards.length} kartu berhasil ditambahkan.` });
+        setCardsToReview(null);
+    } catch (error: any) {
+        console.error("Gagal mengimpor data:", error);
+        toast({ title: "Gagal Mengimpor Data", description: error.message || "Terjadi kesalahan saat menyimpan data.", variant: "destructive" });
+    } finally {
+        setIsImporting(false);
+    }
   };
 
 
@@ -388,6 +449,10 @@ function CardsPageContent() {
                 <DropdownMenuItem onClick={() => setSortOption('name-desc')}>Nama (Z-A)</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button variant="outline" size="sm" className="h-9 gap-1" onClick={handleDownloadSample}>
+                <Download className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Contoh</span>
+            </Button>
             <Button variant="outline" size="sm" className="h-9 gap-1" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Impor</span>
@@ -579,7 +644,7 @@ function CardsPageContent() {
                     {selectedCard ? "Perbarui detail kartu kredit Anda." : "Isi formulir di bawah untuk menambahkan kartu baru."}
                     </DrawerDescription>
                 </DrawerHeader>
-                <div className="px-4">
+                <div className="px-4 pb-4">
                     <CardForm
                         onSubmit={handleSubmit}
                         onCancel={handleCloseForm}
@@ -639,6 +704,63 @@ function CardsPageContent() {
         open={isPaymentHistoryOpen}
         onOpenChange={setIsPaymentHistoryOpen}
       />
+
+       <Dialog open={!!cardsToReview} onOpenChange={(isOpen) => !isOpen && setCardsToReview(null)}>
+        <DialogContent className="sm:max-w-4xl">
+            <DialogHeader>
+            <DialogTitle>Tinjau Impor Kartu</DialogTitle>
+            <DialogDescription>
+                Periksa data di bawah ini. Kartu dengan error akan dilewati. Anda dapat memperbaiki file Excel dan mengunggahnya kembali.
+            </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto pr-2">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Bank</TableHead>
+                    <TableHead>Kartu</TableHead>
+                    <TableHead>4 Digit</TableHead>
+                    <TableHead className="text-right">Limit</TableHead>
+                    <TableHead className="text-right">Utang</TableHead>
+                    <TableHead>Error</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {cardsToReview?.map((card, index) => (
+                    <TableRow key={index} className={!card._isValid ? 'bg-destructive/10 hover:bg-destructive/20' : ''}>
+                    <TableCell className="font-medium">{String(card["Bank Name"] || '')}</TableCell>
+                    <TableCell>{String(card["Card Name"] || '')}</TableCell>
+                    <TableCell>{String(card["Last 4 Digits"] || '')}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(Number(card["Credit Limit"] || 0))}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(Number(card["Current Debt"] || 0))}</TableCell>
+                    <TableCell>
+                        {!card._isValid && (
+                        <TooltipProvider>
+                            <Tooltip>
+                            <TooltipTrigger asChild>
+                                <AlertTriangle className="h-5 w-5 text-destructive" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{card._error}</p>
+                            </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        )}
+                    </TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setCardsToReview(null)} disabled={isImporting}>Batal</Button>
+                <Button onClick={handleConfirmImport} disabled={isImporting || !cardsToReview?.some(c => c._isValid)}>
+                    {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Konfirmasi & Impor {isImporting ? "" : `(${cardsToReview?.filter(c => c._isValid).length || 0})`}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+        </Dialog>
     </>
   );
 }
