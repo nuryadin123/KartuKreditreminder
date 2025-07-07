@@ -7,7 +7,7 @@ import { ProtectedLayout } from '@/components/layout/protected-layout';
 import { ThemeProvider } from '@/context/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'KARTUMU',
+  title: 'KreditTrack',
   description: 'Manajemen utang kartu kredit.',
 };
 
@@ -29,7 +29,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <ThemeProvider
           defaultTheme="system"
-          storageKey="kartumu-ui-theme"
+          storageKey="kredittrack-ui-theme"
         >
           <AuthProvider>
               <ProtectedLayout>
