@@ -57,6 +57,7 @@ export default function CardsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
+  const [openCollapsibleCardId, setOpenCollapsibleCardId] = useState<string | null>(null);
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
@@ -335,7 +336,12 @@ export default function CardsPage() {
                             </div>
                         </div>
                     </div>
-                    <Collapsible>
+                    <Collapsible
+                      open={openCollapsibleCardId === card.id}
+                      onOpenChange={(isOpen) => {
+                        setOpenCollapsibleCardId(isOpen ? card.id : null);
+                      }}
+                    >
                         <div className="flex justify-center -mb-1 mt-2" onClick={(e) => e.stopPropagation()}>
                             <CollapsibleTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-foreground group w-auto px-2">
