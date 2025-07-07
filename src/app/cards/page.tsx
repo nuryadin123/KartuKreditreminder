@@ -44,6 +44,8 @@ import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestor
 import { useAuth } from "@/context/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Draggable from 'react-draggable';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const CardDetails = ({ card, nextReminderDate }: { card: CreditCard, nextReminderDate: Date | null }) => {
     return (
@@ -92,6 +94,7 @@ function CardsPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<string>("available-credit-desc");
   const isMobile = useIsMobile();
+  const [isDragging, setIsDragging] = useState(false);
 
    useEffect(() => {
     if (loadingCards) return;
@@ -253,6 +256,20 @@ function CardsPageContent() {
     return addMonths(lastDate, monthsToAdd);
   };
 
+  const handleFabClick = () => {
+    if (!isDragging) {
+      handleOpenForm();
+    }
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragStop = () => {
+    setTimeout(() => setIsDragging(false), 0);
+  };
+
   const isLoading = loadingCards || loadingTransactions;
   const nextReminderDateForDialog = detailsCard ? getNextReminderDate(detailsCard) : null;
 
@@ -292,10 +309,6 @@ function CardsPageContent() {
                 <DropdownMenuItem onClick={() => setSortOption('name-desc')}>Nama (Z-A)</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => handleOpenForm()}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Tambah Kartu
-            </Button>
           </div>
         </div>
 
@@ -318,10 +331,6 @@ function CardsPageContent() {
             <div className="text-center py-10 text-muted-foreground col-span-full border-2 border-dashed rounded-lg">
                 <h3 className="text-lg font-medium">Anda belum punya kartu</h3>
                 <p className="text-sm mb-4">Silakan tambahkan kartu kredit pertama Anda.</p>
-                <Button onClick={() => handleOpenForm()}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Tambah Kartu
-                </Button>
             </div>
         ) : filteredCards.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground col-span-full border-2 border-dashed rounded-lg">
@@ -419,6 +428,28 @@ function CardsPageContent() {
             </div>
         )}
       </div>
+
+      <Draggable onStart={handleDragStart} onStop={handleDragStop}>
+        <div className="fixed bottom-8 right-8 z-50 cursor-move">
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                         <Button 
+                            onClick={handleFabClick} 
+                            className="rounded-full w-14 h-14 shadow-lg"
+                            size="icon"
+                            aria-label="Tambah Kartu"
+                        >
+                            <PlusCircle className="h-6 w-6" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Tambah Kartu</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
+      </Draggable>
 
       {isMobile ? (
         <Drawer open={!!detailsCard} onOpenChange={(isOpen) => !isOpen && setDetailsCard(null)}>
