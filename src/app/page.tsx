@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { CreditCard, DollarSign, Calendar, Loader2, Bell, Wallet } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, Loader2, Bell, Wallet, AlertTriangle } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
 import type { CreditCard as CreditCardType, Transaction } from "@/types";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
@@ -91,31 +91,37 @@ export default function Home() {
     return { totalDebt, totalRemainingLimit, chartData };
   }, [cards, transactions, loadingCards, loadingTransactions]);
 
-  const cardBillSummaries = useMemo(() => {
-    if (loadingCards || loadingTransactions) return [];
+  const { upcomingBills, overdueBills } = useMemo(() => {
+    if (loadingCards || loadingTransactions) {
+      return { upcomingBills: [], overdueBills: [] };
+    }
 
     const today = startOfToday();
-    const result: { card: CreditCardType; debt: number; dueDate: Date }[] = [];
-
-    const getNextDueDate = (dueDateNumber: number) => {
-      let dueDate = new Date(today.getFullYear(), today.getMonth(), dueDateNumber);
-      if (isBefore(dueDate, today)) {
-        dueDate.setMonth(dueDate.getMonth() + 1);
-      }
-      return dueDate;
-    };
+    const upcoming: { card: CreditCardType; debt: number; dueDate: Date }[] = [];
+    const overdue: { card: CreditCardType; debt: number; dueDate: Date }[] = [];
 
     cards.forEach(card => {
       const debtData = chartData.find(d => d.name === card.cardName);
       const debt = debtData ? debtData["Total Utang"] : 0;
-      if (debt <= 0) return; // Hanya tampilkan kartu yang punya utang
+      if (debt <= 0) return; // Only process cards with debt
 
-      const nextDueDate = getNextDueDate(card.dueDate);
-
-      result.push({ card, debt, dueDate: nextDueDate });
+      const dueDateThisMonth = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
+      
+      if (isAfter(today, dueDateThisMonth)) {
+        // Due date for this month's cycle has passed, it's overdue
+        overdue.push({ card, debt, dueDate: dueDateThisMonth });
+      } else {
+        // Due date is today or in the future this month, it's upcoming
+        upcoming.push({ card, debt, dueDate: dueDateThisMonth });
+      }
     });
 
-    return result.sort((a, b) => b.debt - a.debt); // Urutkan berdasarkan utang terbesar
+    // Sort upcoming by the nearest due date
+    upcoming.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+    // Sort overdue by the most recently missed due date
+    overdue.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+
+    return { upcomingBills: upcoming.slice(0, 7), overdueBills: overdue };
   }, [cards, chartData, loadingCards, loadingTransactions]);
 
   useEffect(() => {
@@ -254,12 +260,12 @@ export default function Home() {
 
               <Card>
                 <CardHeader>
-                    <CardTitle>Ringkasan Tagihan Kartu</CardTitle>
-                    <CardDescription>Daftar semua kartu dengan tagihan yang belum lunas. Diurutkan berdasarkan utang terbesar.</CardDescription>
+                    <CardTitle>Ringkasan Tagihan Terdekat</CardTitle>
+                    <CardDescription>7 tagihan dengan jatuh tempo terdekat yang belum lunas.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {cardBillSummaries.length > 0 ? (
-                        cardBillSummaries.map(({ card, debt, dueDate }) => (
+                    {upcomingBills.length > 0 ? (
+                        upcomingBills.map(({ card, debt, dueDate }) => (
                             <Alert key={card.id}>
                                 <Bell className="h-4 w-4" />
                                 <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
@@ -275,7 +281,35 @@ export default function Home() {
                             </Alert>
                         ))
                     ) : (
-                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang perlu dibayar. Selamat!</p>
+                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang akan datang. Semua lunas!</p>
+                    )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                    <CardTitle>Tagihan Lewat Jatuh Tempo</CardTitle>
+                    <CardDescription>Tagihan dari siklus saat ini yang telah melewati tanggal pembayaran.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {overdueBills.length > 0 ? (
+                        overdueBills.map(({ card, debt, dueDate }) => (
+                            <Alert key={card.id} variant="destructive">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
+                                <AlertDescription>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <span>Seharusnya dibayar pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
+                                            <span className="font-semibold block sm:inline sm:ml-4">{formatCurrency(debt)}</span>
+                                        </div>
+                                        <Button variant="destructive" size="sm" onClick={() => handleOpenPaymentDialog(card)}>Bayar Sekarang</Button>
+                                    </div>
+                                </AlertDescription>
+                            </Alert>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang lewat jatuh tempo. Kerja bagus!</p>
                     )}
                 </CardContent>
               </Card>
