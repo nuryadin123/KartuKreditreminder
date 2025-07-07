@@ -30,15 +30,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2, Search } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +56,7 @@ export default function CardsPage() {
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState<string>("limit-desc");
+  const [sortOption, setSortOption] = useState<string>("available-credit-desc");
 
   const cardDebts = useMemo(() => {
     const debts = new Map<string, number>();
@@ -86,9 +79,12 @@ export default function CardsPage() {
     const sorted = [...cards].sort((a, b) => {
         const debtA = cardDebts.get(a.id) || 0;
         const debtB = cardDebts.get(b.id) || 0;
+        const availableCreditA = a.creditLimit - debtA;
+        const availableCreditB = b.creditLimit - debtB;
+
         switch (sortOption) {
-            case 'limit-asc':
-                return a.creditLimit - b.creditLimit;
+            case 'available-credit-asc':
+                return availableCreditA - availableCreditB;
             case 'debt-desc':
                 return debtB - debtA;
             case 'debt-asc':
@@ -97,9 +93,9 @@ export default function CardsPage() {
                 return a.cardName.localeCompare(b.cardName);
             case 'name-desc':
                 return b.cardName.localeCompare(a.cardName);
-            case 'limit-desc':
+            case 'available-credit-desc':
             default:
-                return b.creditLimit - a.creditLimit;
+                return availableCreditB - availableCreditA;
         }
     });
 
@@ -123,11 +119,6 @@ export default function CardsPage() {
   const handleOpenDeleteAlert = (card: CreditCard) => {
     setSelectedCard(card);
     setIsDeleteAlertOpen(true);
-  };
-
-  const handleCloseDeleteAlert = () => {
-    setSelectedCard(null);
-    setIsDeleteAlertOpen(false);
   };
   
   const handleOpenPaymentHistory = (card: CreditCard) => {
@@ -210,19 +201,22 @@ export default function CardsPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Urutkan berdasarkan" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="limit-desc">Limit (Tertinggi)</SelectItem>
-                <SelectItem value="limit-asc">Limit (Terendah)</SelectItem>
-                <SelectItem value="debt-desc">Utang (Tertinggi)</SelectItem>
-                <SelectItem value="debt-asc">Utang (Terendah)</SelectItem>
-                <SelectItem value="name-asc">Nama (A-Z)</SelectItem>
-                <SelectItem value="name-desc">Nama (Z-A)</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1">
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Urutkan</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSortOption('available-credit-desc')}>Sisa Limit (Tertinggi)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption('available-credit-asc')}>Sisa Limit (Terendah)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption('debt-desc')}>Utang (Tertinggi)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption('debt-asc')}>Utang (Terendah)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption('name-asc')}>Nama (A-Z)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption('name-desc')}>Nama (Z-A)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={() => handleOpenForm()}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Tambah Kartu
@@ -403,7 +397,3 @@ export default function CardsPage() {
     </>
   );
 }
-
-    
-
-    
