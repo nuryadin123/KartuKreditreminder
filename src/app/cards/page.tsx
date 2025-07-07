@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -38,7 +37,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
+import { PlusCircle, MoreVertical, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { useToast } from "@/hooks/use-toast";
@@ -329,7 +328,7 @@ export default function CardsPage() {
                                   className="h-8 w-8 flex-shrink-0"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                    <MoreHorizontal className="h-4 w-4" />
+                                    <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
