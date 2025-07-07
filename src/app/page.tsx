@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { CreditCard, DollarSign, Calendar, Loader2, Bell, Wallet, AlertTriangle } from "lucide-react";
@@ -20,15 +20,13 @@ import Link from "next/link";
 
 export default function Home() {
   const { user } = useAuth();
+  const router = useRouter();
   const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCardType>("cards", user?.uid);
   const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions", user?.uid);
   const [upcomingDueDate, setUpcomingDueDate] = useState<Date | null>(null);
   const { toast } = useToast();
   const [notificationsShown, setNotificationsShown] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
-
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [selectedCardForPayment, setSelectedCardForPayment] = useState<CreditCardType | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && "Notification" in window) {
@@ -159,33 +157,6 @@ export default function Home() {
     setNotificationsShown(true);
   }, [cards, chartData, loadingCards, loadingTransactions, notificationsShown, toast, notificationPermission]);
 
-  const handleOpenPaymentDialog = (card: CreditCardType) => {
-    setSelectedCardForPayment(card);
-    setIsPaymentDialogOpen(true);
-  };
-
-  const handlePayment = async ({ amount }: { amount: number }) => {
-    if (selectedCardForPayment && user) {
-      const newPayment: Omit<Transaction, 'id'> = {
-        userId: user.uid,
-        cardId: selectedCardForPayment.id,
-        date: new Date().toISOString(),
-        description: `Pembayaran Kartu Kredit`,
-        amount: amount,
-        category: 'Pembayaran',
-        status: 'lunas',
-      };
-      try {
-        await addDoc(collection(db, 'transactions'), newPayment);
-        toast({ title: "Pembayaran Berhasil", description: `Pembayaran sebesar ${formatCurrency(amount)} telah dicatat.` });
-      } catch (error: any) {
-        toast({ title: "Gagal Membayar", description: error.message || "Terjadi kesalahan saat mencatat pembayaran.", variant: "destructive" });
-      }
-      setIsPaymentDialogOpen(false);
-      setSelectedCardForPayment(null);
-    }
-  };
-
   const isLoading = loadingCards || loadingTransactions;
   
   const filteredChartData = useMemo(() => {
@@ -275,7 +246,7 @@ export default function Home() {
                                             <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
                                             <span className="font-semibold block sm:inline sm:ml-4 text-destructive">{formatCurrency(debt)}</span>
                                         </div>
-                                        <Button size="sm" onClick={() => handleOpenPaymentDialog(card)}>Bayar</Button>
+                                        <Button size="sm" onClick={() => router.push(`/payment?cardId=${card.id}`)}>Bayar</Button>
                                     </div>
                                 </AlertDescription>
                             </Alert>
@@ -303,7 +274,7 @@ export default function Home() {
                                             <span>Seharusnya dibayar pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
                                             <span className="font-semibold block sm:inline sm:ml-4">{formatCurrency(debt)}</span>
                                         </div>
-                                        <Button variant="destructive" size="sm" onClick={() => handleOpenPaymentDialog(card)}>Bayar Sekarang</Button>
+                                        <Button variant="destructive" size="sm" onClick={() => router.push(`/payment?cardId=${card.id}`)}>Bayar Sekarang</Button>
                                     </div>
                                 </AlertDescription>
                             </Alert>
@@ -334,13 +305,8 @@ export default function Home() {
           </>
         )}
       </div>
-      <PaymentDialog
-        card={selectedCardForPayment}
-        transactions={transactions}
-        open={isPaymentDialogOpen}
-        onOpenChange={setIsPaymentDialogOpen}
-        onSubmit={handlePayment}
-      />
     </>
   );
 }
+
+    

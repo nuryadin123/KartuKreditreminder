@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { addMonths } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,6 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2, Search } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
-import { PaymentDialog } from "@/components/cards/payment-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog";
 import { Progress } from "@/components/ui/progress";
@@ -52,12 +52,12 @@ import { useAuth } from "@/context/auth-context";
 
 export default function CardsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards", user?.uid);
   const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions", user?.uid);
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
@@ -130,16 +130,6 @@ export default function CardsPage() {
     setIsDeleteAlertOpen(false);
   };
   
-  const handleOpenPaymentDialog = (card: CreditCard) => {
-    setSelectedCard(card);
-    setIsPaymentDialogOpen(true);
-  };
-
-  const handleClosePaymentDialog = () => {
-    setSelectedCard(null);
-    setIsPaymentDialogOpen(false);
-  };
-  
   const handleOpenPaymentHistory = (card: CreditCard) => {
     setSelectedCard(card);
     setIsPaymentHistoryOpen(true);
@@ -187,27 +177,6 @@ export default function CardsPage() {
             toast({ title: "Gagal Menghapus", description: error.message || "Terjadi kesalahan saat menghapus kartu.", variant: "destructive" });
         }
         handleCloseDeleteAlert();
-    }
-  };
-
-  const handlePayment = async ({ amount }: { amount: number }) => {
-    if (selectedCard && user) {
-      const newPayment: Omit<Transaction, 'id'> = {
-        userId: user.uid,
-        cardId: selectedCard.id,
-        date: new Date().toISOString(),
-        description: `Pembayaran Kartu Kredit`,
-        amount: amount,
-        category: 'Pembayaran',
-        status: 'lunas',
-      };
-      try {
-        await addDoc(collection(db, 'transactions'), newPayment);
-        toast({ title: "Pembayaran Berhasil", description: `Pembayaran sebesar ${formatCurrency(amount)} telah dicatat.` });
-      } catch (error: any) {
-        toast({ title: "Gagal Membayar", description: error.message || "Terjadi kesalahan saat mencatat pembayaran.", variant: "destructive" });
-      }
-      handleClosePaymentDialog();
     }
   };
   
@@ -301,7 +270,7 @@ export default function CardsPage() {
                 <Card 
                   key={card.id} 
                   className="flex flex-col cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleOpenPaymentDialog(card)}
+                  onClick={() => router.push(`/payment?cardId=${card.id}`)}
                 >
                 <CardHeader>
                     <div className="flex justify-between items-start">
@@ -422,14 +391,6 @@ export default function CardsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <PaymentDialog
-        card={selectedCard}
-        transactions={transactions}
-        open={isPaymentDialogOpen}
-        onOpenChange={setIsPaymentDialogOpen}
-        onSubmit={handlePayment}
-      />
-
       <PaymentHistoryDialog
         card={selectedCard}
         transactions={transactions}
@@ -439,5 +400,7 @@ export default function CardsPage() {
     </>
   );
 }
+
+    
 
     
