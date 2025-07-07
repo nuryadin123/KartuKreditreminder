@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { addMonths } from "date-fns";
+import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
+import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown, Upload } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { PaymentDrawer } from "@/components/cards/payment-drawer";
@@ -40,12 +41,10 @@ import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog"
 import { Progress } from "@/components/ui/progress";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
 import { useAuth } from "@/context/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import Draggable from 'react-draggable';
-import type { DraggableData, DraggableEvent } from "react-draggable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const CardDetails = ({ card, nextReminderDate }: { card: CreditCard, nextReminderDate: Date | null }) => {
@@ -95,8 +94,7 @@ function CardsPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<string>("available-credit-desc");
   const isMobile = useIsMobile();
-  const fabRef = useRef(null);
-  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
    useEffect(() => {
     if (loadingCards) return;
@@ -258,19 +256,98 @@ function CardsPageContent() {
     return addMonths(lastDate, monthsToAdd);
   };
 
-  const handleDragStart = (e: DraggableEvent, data: DraggableData) => {
-    setDragStartPos({ x: data.x, y: data.y });
-  };
-
-  const handleDragStop = (e: DraggableEvent, data: DraggableData) => {
-    const deltaX = Math.abs(data.x - dragStartPos.x);
-    const deltaY = Math.abs(data.y - dragStartPos.y);
-
-    if (deltaX < 5 && deltaY < 5) {
-      // It's a click, not a drag
-      handleOpenForm();
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) {
+        toast({ title: "Gagal", description: "Anda harus masuk untuk mengimpor kartu.", variant: "destructive" });
+        return;
     }
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+            if (json.length === 0) {
+                toast({ title: "File Kosong", description: "File Excel yang Anda unggah tidak berisi data.", variant: "destructive" });
+                return;
+            }
+
+            const requiredHeaders = ["Bank Name", "Card Name", "Last 4 Digits", "Credit Limit", "Current Debt"];
+            const actualHeaders = Object.keys(json[0]);
+            const missingHeaders = requiredHeaders.filter(h => !actualHeaders.includes(h));
+
+            if (missingHeaders.length > 0) {
+                 toast({
+                    title: "Format Salah",
+                    description: `Kolom berikut tidak ditemukan di file Excel Anda: ${missingHeaders.join(", ")}.`,
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            toast({ title: "Mengimpor...", description: `Memproses ${json.length} kartu.` });
+
+            const batch = writeBatch(db);
+
+            for (const row of json) {
+                const cardData: Omit<CreditCard, 'id'> = {
+                    userId: user.uid,
+                    bankName: String(row["Bank Name"] || ''),
+                    cardName: String(row["Card Name"] || ''),
+                    last4Digits: String(row["Last 4 Digits"] || '0000').slice(-4),
+                    creditLimit: Number(row["Credit Limit"] || 0),
+                    billingDate: Number(row["Billing Date"] || 1),
+                    dueDate: Number(row["Due Date"] || 15),
+                    interestRate: Number(row["Interest Rate"] || 21),
+                    limitIncreaseReminder: 'tidak'
+                };
+
+                if (!cardData.bankName || !cardData.cardName || isNaN(cardData.creditLimit)) {
+                    console.warn("Melewatkan baris tidak valid:", row);
+                    continue;
+                }
+                
+                const cardRef = doc(collection(db, 'cards'));
+                batch.set(cardRef, cardData);
+
+                const debt = Number(row["Current Debt"] || 0);
+                if (debt > 0) {
+                    const transactionData: Omit<Transaction, 'id'> = {
+                        userId: user.uid,
+                        cardId: cardRef.id,
+                        date: new Date().toISOString(),
+                        description: "Saldo awal dari impor",
+                        amount: debt,
+                        category: 'Lainnya',
+                        status: 'belum lunas'
+                    };
+                    const transactionRef = doc(collection(db, 'transactions'));
+                    batch.set(transactionRef, transactionData);
+                }
+            }
+
+            await batch.commit();
+
+            toast({ title: "Impor Berhasil", description: `${json.length} kartu berhasil ditambahkan.` });
+
+        } catch (error: any) {
+            console.error("Gagal mengimpor file:", error);
+            toast({ title: "Gagal Mengimpor", description: error.message || "Terjadi kesalahan saat memproses file.", variant: "destructive" });
+        } finally {
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
+    reader.readAsArrayBuffer(file);
   };
+
 
   const isLoading = loadingCards || loadingTransactions;
   const nextReminderDateForDialog = detailsCard ? getNextReminderDate(detailsCard) : null;
@@ -311,6 +388,11 @@ function CardsPageContent() {
                 <DropdownMenuItem onClick={() => setSortOption('name-desc')}>Nama (Z-A)</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button variant="outline" size="sm" className="h-9 gap-1" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Impor</span>
+            </Button>
+            <input type="file" ref={fileInputRef} onChange={handleFileImport} style={{ display: 'none' }} accept=".xlsx, .xls" />
           </div>
         </div>
 
@@ -431,30 +513,25 @@ function CardsPageContent() {
         )}
       </div>
 
-      <Draggable
-        nodeRef={fabRef}
-        onStart={handleDragStart}
-        onStop={handleDragStop}
-      >
-        <div ref={fabRef} className="fixed bottom-8 right-8 z-50 cursor-move">
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                         <Button
-                            className="rounded-full w-14 h-14 shadow-lg"
-                            size="icon"
-                            aria-label="Tambah Kartu"
-                        >
-                            <PlusCircle className="h-6 w-6" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Tambah Kartu</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        </div>
-      </Draggable>
+      <div className="fixed bottom-8 right-8 z-50">
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                     <Button
+                        className="rounded-full w-14 h-14 shadow-lg"
+                        size="icon"
+                        aria-label="Tambah Kartu"
+                        onClick={() => handleOpenForm()}
+                    >
+                        <PlusCircle className="h-6 w-6" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Tambah Kartu</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+      </div>
 
       {isMobile ? (
         <Drawer open={!!detailsCard} onOpenChange={(isOpen) => !isOpen && setDetailsCard(null)}>
