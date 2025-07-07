@@ -31,7 +31,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown, MoreVertical } from "lucide-react";
+import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { PaymentDrawer } from "@/components/cards/payment-drawer";
@@ -45,6 +45,7 @@ import { useAuth } from "@/context/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Draggable from 'react-draggable';
+import type { DraggableData, DraggableEvent } from "react-draggable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const CardDetails = ({ card, nextReminderDate }: { card: CreditCard, nextReminderDate: Date | null }) => {
@@ -94,8 +95,8 @@ function CardsPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<string>("available-credit-desc");
   const isMobile = useIsMobile();
-  const [isDragging, setIsDragging] = useState(false);
   const fabRef = useRef(null);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
 
    useEffect(() => {
     if (loadingCards) return;
@@ -257,18 +258,18 @@ function CardsPageContent() {
     return addMonths(lastDate, monthsToAdd);
   };
 
-  const handleFabClick = () => {
-    if (!isDragging) {
+  const handleDragStart = (e: DraggableEvent, data: DraggableData) => {
+    setDragStartPos({ x: data.x, y: data.y });
+  };
+
+  const handleDragStop = (e: DraggableEvent, data: DraggableData) => {
+    const deltaX = Math.abs(data.x - dragStartPos.x);
+    const deltaY = Math.abs(data.y - dragStartPos.y);
+
+    if (deltaX < 5 && deltaY < 5) {
+      // It's a click, not a drag
       handleOpenForm();
     }
-  };
-
-  const handleDragStart = () => {
-    setIsDragging(true);
-  };
-
-  const handleDragStop = () => {
-    setTimeout(() => setIsDragging(false), 0);
   };
 
   const isLoading = loadingCards || loadingTransactions;
@@ -430,13 +431,16 @@ function CardsPageContent() {
         )}
       </div>
 
-      <Draggable nodeRef={fabRef} onStart={handleDragStart} onStop={handleDragStop}>
+      <Draggable
+        nodeRef={fabRef}
+        onStart={handleDragStart}
+        onStop={handleDragStop}
+      >
         <div ref={fabRef} className="fixed bottom-8 right-8 z-50 cursor-move">
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                         <Button 
-                            onClick={handleFabClick} 
+                         <Button
                             className="rounded-full w-14 h-14 shadow-lg"
                             size="icon"
                             aria-label="Tambah Kartu"
