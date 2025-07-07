@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Landmark, History, Loader2, Search } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
@@ -151,7 +151,6 @@ export default function CardsPage() {
         return;
     }
 
-    // Create a mutable copy of the values to avoid sending undefined to Firestore
     const cardData: { [key: string]: any } = {
         ...values,
         userId: user.uid,
@@ -160,7 +159,6 @@ export default function CardsPage() {
     if (values.lastLimitIncreaseDate) {
         cardData.lastLimitIncreaseDate = values.lastLimitIncreaseDate.toISOString();
     } else {
-        // Firestore doesn't allow 'undefined' fields. Delete the key if it's not set.
         delete cardData.lastLimitIncreaseDate;
     }
     
@@ -333,45 +331,50 @@ export default function CardsPage() {
                         **** **** **** {card.last4Digits}
                     </div>
                 </CardHeader>
-                <CardContent className="flex-grow space-y-4">
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-baseline">
-                            <span className="text-sm text-muted-foreground">Sisa Utang</span>
-                            {debt >= 0 ? (
-                                <span className="font-semibold text-destructive">{formatCurrency(debt)}</span>
-                            ) : (
-                                <span className="font-semibold text-green-600">Surplus {formatCurrency(Math.abs(debt))}</span>
-                            )}
+                <CardContent className="flex-grow flex flex-col justify-between">
+                    <div>
+                        <div className="mb-4">
+                            <p className="text-sm text-muted-foreground">Sisa Limit Tersedia</p>
+                            <p className={cn(
+                                "text-3xl font-bold tracking-tight",
+                                availableCredit < 0 ? "text-destructive" : "text-green-600"
+                            )}>
+                                {formatCurrency(availableCredit)}
+                            </p>
                         </div>
-                        <Progress value={debtPercentage} aria-label={`${debtPercentage.toFixed(2)}% used`} />
-                        <div className="flex justify-between items-baseline text-sm text-muted-foreground">
-                            <span>Limit: {formatCurrency(card.creditLimit)}</span>
-                            <span>Tersedia: {formatCurrency(availableCredit)}</span>
+                        <div className="space-y-2 mb-4">
+                            <Progress value={debtPercentage} aria-label={`${debtPercentage.toFixed(2)}% terpakai`} />
+                            <div className="flex justify-between items-baseline text-sm text-muted-foreground">
+                                <span>Terpakai: {formatCurrency(debt)}</span>
+                                <span>Total Limit: {formatCurrency(card.creditLimit)}</span>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex justify-between items-baseline">
-                    <span className="text-sm text-muted-foreground">Tgl. Cetak Tagihan</span>
-                    <span className="font-semibold">Tanggal {card.billingDate}</span>
-                    </div>
-                    <div className="flex justify-between items-baseline">
-                    <span className="text-sm text-muted-foreground">Jatuh Tempo</span>
-                    <span className="font-semibold">Tanggal {card.dueDate}</span>
-                    </div>
-                    <div className="flex justify-between items-baseline">
-                    <span className="text-sm text-muted-foreground">Suku Bunga</span>
-                    <span className="font-semibold">{card.interestRate}% / tahun</span>
-                    </div>
-                    {nextReminderDate ? (
-                        <div className="flex justify-between items-baseline">
-                            <span className="text-sm text-muted-foreground">Pengingat Berikutnya</span>
-                            <span className="font-semibold">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(nextReminderDate)}</span>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Tgl. Cetak Tagihan</span>
+                            <span className="font-medium">Tanggal {card.billingDate}</span>
                         </div>
-                    ) : (
-                        <div className="flex justify-between items-baseline">
-                            <span className="text-sm text-muted-foreground">Pengingat Limit</span>
-                            <span className="font-semibold">Tidak Aktif</span>
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Jatuh Tempo</span>
+                            <span className="font-medium">Tanggal {card.dueDate}</span>
                         </div>
-                    )}
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Suku Bunga</span>
+                            <span className="font-medium">{card.interestRate}% / tahun</span>
+                        </div>
+                        {nextReminderDate ? (
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Pengingat Berikutnya</span>
+                                <span className="font-medium">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(nextReminderDate)}</span>
+                            </div>
+                        ) : (
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Pengingat Limit</span>
+                                <span className="font-medium">Tidak Aktif</span>
+                            </div>
+                        )}
+                    </div>
                 </CardContent>
                 <CardFooter>
                     <Button onClick={() => handleOpenPaymentDialog(card)} className="w-full">
@@ -433,5 +436,3 @@ export default function CardsPage() {
     </>
   );
 }
-
-    
