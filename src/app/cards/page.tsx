@@ -120,6 +120,11 @@ export default function CardsPage() {
     setSelectedCard(card);
     setIsDeleteAlertOpen(true);
   };
+
+  const handleCloseDeleteAlert = () => {
+    setSelectedCard(null);
+    setIsDeleteAlertOpen(false);
+  };
   
   const handleOpenPaymentHistory = (card: CreditCard) => {
     setSelectedCard(card);
