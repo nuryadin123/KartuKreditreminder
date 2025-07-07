@@ -298,7 +298,11 @@ export default function CardsPage() {
                 const nextReminderDate = getNextReminderDate(card);
                 
                 return (
-                <Card key={card.id} className="flex flex-col">
+                <Card 
+                  key={card.id} 
+                  className="flex flex-col cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleOpenPaymentDialog(card)}
+                >
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <div>
@@ -307,20 +311,25 @@ export default function CardsPage() {
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 flex-shrink-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenForm(card)}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenForm(card); }}>
                                     <Edit className="mr-2 h-4 w-4"/>
                                     Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenPaymentHistory(card)}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenPaymentHistory(card); }}>
                                     <History className="mr-2 h-4 w-4"/>
                                     Riwayat Pembayaran
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenDeleteAlert(card)} className="text-destructive focus:text-destructive">
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenDeleteAlert(card); }} className="text-destructive focus:text-destructive">
                                     <Trash2 className="mr-2 h-4 w-4"/>
                                     Hapus
                                 </DropdownMenuItem>
@@ -376,12 +385,6 @@ export default function CardsPage() {
                         )}
                     </div>
                 </CardContent>
-                <CardFooter>
-                    <Button onClick={() => handleOpenPaymentDialog(card)} className="w-full">
-                    <Landmark className="mr-2 h-4 w-4" />
-                    Lakukan Pembayaran
-                    </Button>
-                </CardFooter>
                 </Card>
             )})}
             </div>
@@ -436,3 +439,5 @@ export default function CardsPage() {
     </>
   );
 }
+
+    
