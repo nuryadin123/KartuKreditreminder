@@ -39,7 +39,7 @@ import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog"
 import { Progress } from "@/components/ui/progress";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/auth-context";
 
 
@@ -274,11 +274,11 @@ export default function CardsPage() {
                   className="flex flex-col cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => router.push(`/payment?cardId=${card.id}`)}
                 >
-                <CardHeader className="p-4 pb-2">
+                <CardHeader className="p-3 pb-2">
                     <div className="flex justify-between items-start">
                         <div>
-                            <CardTitle className="text-xl">{card.cardName}</CardTitle>
-                            <CardDescription>{card.bankName}</CardDescription>
+                            <CardTitle className="text-lg font-semibold leading-tight">{card.cardName}</CardTitle>
+                            <CardDescription className="text-xs">{card.bankName}</CardDescription>
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -307,51 +307,51 @@ export default function CardsPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                    <div className="text-base font-mono text-muted-foreground pt-2 tracking-widest">
+                    <div className="text-sm font-mono text-muted-foreground pt-1 tracking-wider">
                         **** **** **** {card.last4Digits}
                     </div>
                 </CardHeader>
-                <CardContent className="p-4 pt-0 flex-grow flex flex-col justify-between">
+                <CardContent className="p-3 pt-2 flex-grow flex flex-col justify-between">
                     <div>
-                        <div className="mb-3">
-                            <p className="text-sm text-muted-foreground">Sisa Limit Tersedia</p>
+                        <div className="mb-2">
+                            <p className="text-xs text-muted-foreground">Sisa Limit</p>
                             <p className={cn(
-                                "text-2xl font-bold tracking-tight",
+                                "text-xl font-bold tracking-tight",
                                 availableCredit < 0 ? "text-destructive" : "text-green-600"
                             )}>
                                 {formatCurrency(availableCredit)}
                             </p>
                         </div>
-                        <div className="space-y-1.5 mb-3">
+                        <div className="space-y-1 mb-2">
                             <Progress value={debtPercentage} aria-label={`${debtPercentage.toFixed(2)}% terpakai`} />
-                            <div className="flex justify-between items-baseline text-sm text-muted-foreground">
-                                <span>Terpakai: {formatCurrency(debt)}</span>
-                                <span>Total Limit: {formatCurrency(card.creditLimit)}</span>
+                            <div className="flex justify-between items-baseline text-xs text-muted-foreground">
+                                <span>Utang: {formatCurrency(debt)}</span>
+                                <span>Limit: {formatCurrency(card.creditLimit)}</span>
                             </div>
                         </div>
                     </div>
-                    <div className="space-y-1.5 text-sm">
+                    <div className="space-y-1 text-xs">
                         <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Tgl. Cetak Tagihan</span>
-                            <span className="font-medium">Tanggal {card.billingDate}</span>
+                            <span className="text-muted-foreground">Tgl. Cetak</span>
+                            <span className="font-medium">Tgl {card.billingDate}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Jatuh Tempo</span>
-                            <span className="font-medium">Tanggal {card.dueDate}</span>
+                            <span className="font-medium">Tgl {card.dueDate}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Suku Bunga</span>
-                            <span className="font-medium">{card.interestRate}% / tahun</span>
+                            <span className="text-muted-foreground">Bunga</span>
+                            <span className="font-medium">{card.interestRate}%/thn</span>
                         </div>
                         {nextReminderDate ? (
                             <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Pengingat Berikutnya</span>
-                                <span className="font-medium">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(nextReminderDate)}</span>
+                                <span className="text-muted-foreground">Reminder</span>
+                                <span className="font-medium text-right">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' }).format(nextReminderDate)}</span>
                             </div>
                         ) : (
                             <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Pengingat Limit</span>
-                                <span className="font-medium">Tidak Aktif</span>
+                                <span className="text-muted-foreground">Reminder</span>
+                                <span className="font-medium">Off</span>
                             </div>
                         )}
                     </div>
@@ -402,3 +402,5 @@ export default function CardsPage() {
     </>
   );
 }
+
+    
