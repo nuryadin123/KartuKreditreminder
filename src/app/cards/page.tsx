@@ -30,13 +30,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, History, Loader2, Search, ArrowUpDown, ChevronDown } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { useToast } from "@/hooks/use-toast";
@@ -57,7 +52,7 @@ export default function CardsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
-  const [openCollapsibleCardId, setOpenCollapsibleCardId] = useState<string | null>(null);
+  const [detailsCard, setDetailsCard] = useState<CreditCard | null>(null);
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
@@ -192,6 +187,8 @@ export default function CardsPage() {
   };
 
   const isLoading = loadingCards || loadingTransactions;
+  const nextReminderDateForDialog = detailsCard ? getNextReminderDate(detailsCard) : null;
+
 
   return (
     <>
@@ -272,7 +269,6 @@ export default function CardsPage() {
                 const debt = cardDebts.get(card.id) || 0;
                 const availableCredit = card.creditLimit - debt;
                 const debtPercentage = card.creditLimit > 0 ? ((debt > 0 ? debt : 0) / card.creditLimit) * 100 : 0;
-                const nextReminderDate = getNextReminderDate(card);
                 
                 return (
                 <Card 
@@ -336,52 +332,63 @@ export default function CardsPage() {
                             </div>
                         </div>
                     </div>
-                    <Collapsible
-                      open={openCollapsibleCardId === card.id}
-                      onOpenChange={(isOpen) => {
-                        setOpenCollapsibleCardId(isOpen ? card.id : null);
-                      }}
-                    >
-                        <div className="flex justify-center -mb-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                            <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-foreground group w-auto px-2">
-                                    Lihat Detail
-                                    <ChevronDown className="ml-1 h-3 w-3 group-data-[state=open]:rotate-180 transition-transform"/>
-                                </Button>
-                            </CollapsibleTrigger>
-                        </div>
-                        <CollapsibleContent className="space-y-1 text-xs pt-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Tgl. Cetak</span>
-                                <span className="font-medium">Tgl {card.billingDate}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Jatuh Tempo</span>
-                                <span className="font-medium">Tgl {card.dueDate}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Bunga</span>
-                                <span className="font-medium">{card.interestRate}%/thn</span>
-                            </div>
-                            {nextReminderDate ? (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Reminder</span>
-                                    <span className="font-medium text-right">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' }).format(nextReminderDate)}</span>
-                                </div>
-                            ) : (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Reminder</span>
-                                    <span className="font-medium">Off</span>
-                                </div>
-                            )}
-                        </CollapsibleContent>
-                    </Collapsible>
+                    <div className="flex justify-center -mb-1 mt-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setDetailsCard(card);
+                            }}
+                        >
+                            Lihat Detail
+                        </Button>
+                    </div>
                 </CardContent>
                 </Card>
             )})}
             </div>
         )}
       </div>
+
+      <Dialog open={!!detailsCard} onOpenChange={(isOpen) => !isOpen && setDetailsCard(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detail Kartu</DialogTitle>
+            <DialogDescription>
+              {detailsCard?.cardName} ({detailsCard?.bankName})
+            </DialogDescription>
+          </DialogHeader>
+          {detailsCard && (
+            <div className="grid gap-3 py-4 text-sm">
+                <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Tgl. Cetak</span>
+                    <span className="font-medium">Tgl {detailsCard.billingDate}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Jatuh Tempo</span>
+                    <span className="font-medium">Tgl {detailsCard.dueDate}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Bunga</span>
+                    <span className="font-medium">{detailsCard.interestRate}%/thn</span>
+                </div>
+                {nextReminderDateForDialog ? (
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Reminder</span>
+                        <span className="font-medium text-right">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' }).format(nextReminderDateForDialog)}</span>
+                    </div>
+                ) : (
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Reminder</span>
+                        <span className="font-medium">Off</span>
+                    </div>
+                )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -423,5 +430,3 @@ export default function CardsPage() {
     </>
   );
 }
-
-    
