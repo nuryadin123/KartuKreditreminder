@@ -493,21 +493,41 @@ function CardsPageContent() {
       )}
 
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{selectedCard ? "Edit Kartu Kredit" : "Tambah Kartu Kredit Baru"}</DialogTitle>
-            <DialogDescription>
-              {selectedCard ? "Perbarui detail kartu kredit Anda." : "Isi formulir di bawah untuk menambahkan kartu baru."}
-            </DialogDescription>
-          </DialogHeader>
-          <CardForm
-            onSubmit={handleSubmit}
-            onCancel={handleCloseForm}
-            defaultValues={selectedCard || undefined}
-          />
-        </DialogContent>
-      </Dialog>
+      {isMobile ? (
+        <Drawer open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DrawerContent>
+                <DrawerHeader className="text-left">
+                    <DrawerTitle>{selectedCard ? "Edit Kartu Kredit" : "Tambah Kartu Kredit Baru"}</DrawerTitle>
+                    <DrawerDescription>
+                    {selectedCard ? "Perbarui detail kartu kredit Anda." : "Isi formulir di bawah untuk menambahkan kartu baru."}
+                    </DrawerDescription>
+                </DrawerHeader>
+                <div className="px-4">
+                    <CardForm
+                        onSubmit={handleSubmit}
+                        onCancel={handleCloseForm}
+                        defaultValues={selectedCard || undefined}
+                    />
+                </div>
+            </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+                <DialogTitle>{selectedCard ? "Edit Kartu Kredit" : "Tambah Kartu Kredit Baru"}</DialogTitle>
+                <DialogDescription>
+                {selectedCard ? "Perbarui detail kartu kredit Anda." : "Isi formulir di bawah untuk menambahkan kartu baru."}
+                </DialogDescription>
+            </DialogHeader>
+            <CardForm
+                onSubmit={handleSubmit}
+                onCancel={handleCloseForm}
+                defaultValues={selectedCard || undefined}
+            />
+            </DialogContent>
+        </Dialog>
+      )}
       
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent>
