@@ -2,7 +2,7 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { useAuth } from '@/context/auth-context';
@@ -29,10 +29,13 @@ export function ProtectedLayout({ children }: { children: React.ReactNode }) {
     <AuthGuard>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
-          <main className="min-h-svh bg-background p-4 sm:p-6 lg:p-8">
+        <SidebarInset className="p-0">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6 md:hidden">
+            <SidebarTrigger />
+          </header>
+          <div className="p-4 sm:p-6 lg:p-8">
             {children}
-          </main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </AuthGuard>
