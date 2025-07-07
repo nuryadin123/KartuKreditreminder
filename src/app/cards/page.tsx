@@ -37,7 +37,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, MoreVertical, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
+import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
 import { useToast } from "@/hooks/use-toast";
@@ -320,32 +320,35 @@ export default function CardsPage() {
                             <CardTitle className="text-lg font-semibold leading-tight">{card.cardName}</CardTitle>
                             <CardDescription className="text-xs">{card.bankName}</CardDescription>
                         </div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 flex-shrink-0"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenForm(card); }}>
-                                    <Edit className="mr-2 h-4 w-4"/>
-                                    Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenPaymentHistory(card); }}>
-                                    <History className="mr-2 h-4 w-4"/>
-                                    Riwayat Pembayaran
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenDeleteAlert(card); }} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4"/>
-                                    Hapus
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center -mr-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => { e.stopPropagation(); handleOpenForm(card); }}
+                                aria-label="Edit Kartu"
+                            >
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => { e.stopPropagation(); handleOpenPaymentHistory(card); }}
+                                aria-label="Riwayat Pembayaran"
+                            >
+                                <History className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive/80 hover:text-destructive"
+                                onClick={(e) => { e.stopPropagation(); handleOpenDeleteAlert(card); }}
+                                aria-label="Hapus Kartu"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                     <div className="text-sm font-mono text-muted-foreground pt-1 tracking-wider">
                         **** **** **** {card.last4Digits}
