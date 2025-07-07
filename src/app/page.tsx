@@ -8,7 +8,7 @@ import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { CreditCard, DollarSign, Calendar, Loader2, Bell, Wallet, AlertTriangle } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, Loader2, Bell, Wallet, AlertTriangle, X } from "lucide-react";
 import { DebtChart } from "@/components/dashboard/debt-chart";
 import type { CreditCard as CreditCardType, Transaction } from "@/types";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
@@ -27,6 +27,8 @@ export default function Home() {
   const { toast } = useToast();
   const [notificationsShown, setNotificationsShown] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [showUpcomingBills, setShowUpcomingBills] = useState(true);
+  const [showOverdueBills, setShowOverdueBills] = useState(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && "Notification" in window) {
@@ -228,62 +230,74 @@ export default function Home() {
                   </CardContent>
                   </Card>
               </div>
-
+              
+              {showUpcomingBills && upcomingBills.length > 0 && (
               <Card>
                 <CardHeader>
-                    <CardTitle>Ringkasan Tagihan Terdekat</CardTitle>
-                    <CardDescription>7 tagihan dengan jatuh tempo terdekat yang belum lunas.</CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Ringkasan Tagihan Terdekat</CardTitle>
+                            <CardDescription>Tagihan dengan jatuh tempo terdekat yang belum lunas.</CardDescription>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2 -mt-2" onClick={() => setShowUpcomingBills(false)}>
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Tutup</span>
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {upcomingBills.length > 0 ? (
-                        upcomingBills.map(({ card, debt, dueDate }) => (
-                            <Alert key={card.id}>
-                                <Bell className="h-4 w-4" />
-                                <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
-                                <AlertDescription>
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
-                                            <span className="font-semibold block sm:inline sm:ml-4 text-destructive">{formatCurrency(debt)}</span>
-                                        </div>
-                                        <Button size="sm" onClick={() => router.push(`/cards?pay_for_card=${card.id}`)}>Bayar</Button>
+                    {upcomingBills.map(({ card, debt, dueDate }) => (
+                        <Alert key={card.id}>
+                            <Bell className="h-4 w-4" />
+                            <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
+                            <AlertDescription>
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
+                                        <span className="font-semibold block sm:inline sm:ml-4 text-destructive">{formatCurrency(debt)}</span>
                                     </div>
-                                </AlertDescription>
-                            </Alert>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang akan datang. Semua lunas!</p>
-                    )}
+                                    <Button size="sm" onClick={() => router.push(`/cards?pay_for_card=${card.id}`)}>Bayar</Button>
+                                </div>
+                            </AlertDescription>
+                        </Alert>
+                    ))}
                 </CardContent>
               </Card>
+              )}
 
+              {showOverdueBills && overdueBills.length > 0 && (
               <Card>
                 <CardHeader>
-                    <CardTitle>Tagihan Lewat Jatuh Tempo</CardTitle>
-                    <CardDescription>Tagihan dari siklus saat ini yang telah melewati tanggal pembayaran.</CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Tagihan Lewat Jatuh Tempo</CardTitle>
+                            <CardDescription>Tagihan dari siklus saat ini yang telah melewati tanggal pembayaran.</CardDescription>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2 -mt-2" onClick={() => setShowOverdueBills(false)}>
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Tutup</span>
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {overdueBills.length > 0 ? (
-                        overdueBills.map(({ card, debt, dueDate }) => (
-                            <Alert key={card.id} variant="destructive">
-                                <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
-                                <AlertDescription>
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <span>Seharusnya dibayar pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
-                                            <span className="font-semibold block sm:inline sm:ml-4">{formatCurrency(debt)}</span>
-                                        </div>
-                                        <Button variant="destructive" size="sm" onClick={() => router.push(`/cards?pay_for_card=${card.id}`)}>Bayar Sekarang</Button>
+                    {overdueBills.map(({ card, debt, dueDate }) => (
+                        <Alert key={card.id} variant="destructive">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle>{card.cardName} ({card.bankName})</AlertTitle>
+                            <AlertDescription>
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span>Seharusnya dibayar pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
+                                        <span className="font-semibold block sm:inline sm:ml-4">{formatCurrency(debt)}</span>
                                     </div>
-                                </AlertDescription>
-                            </Alert>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground">Tidak ada tagihan yang lewat jatuh tempo. Kerja bagus!</p>
-                    )}
+                                    <Button variant="destructive" size="sm" onClick={() => router.push(`/cards?pay_for_card=${card.id}`)}>Bayar Sekarang</Button>
+                                </div>
+                            </AlertDescription>
+                        </Alert>
+                    ))}
                 </CardContent>
               </Card>
+              )}
 
               <Card>
                   <CardHeader>
@@ -308,5 +322,3 @@ export default function Home() {
     </>
   );
 }
-
-    
