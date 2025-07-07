@@ -231,15 +231,18 @@ export default function CardsPage() {
         </div>
 
         {isLoading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {[...Array(3)].map((_, i) => (
-                    <Card key={i} className="h-[450px]">
-                        <CardHeader><div className="h-6 w-1/2 bg-muted rounded-md animate-pulse" /><div className="h-4 w-1/3 bg-muted rounded-md animate-pulse mt-2" /></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
-                            <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
-                            <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
-                            <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader className="p-4">
+                            <div className="h-5 w-3/4 bg-muted rounded-md animate-pulse" />
+                            <div className="h-4 w-1/2 bg-muted rounded-md animate-pulse mt-2" />
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0 space-y-3">
+                            <div className="h-8 w-full bg-muted rounded-md animate-pulse" />
+                            <div className="h-4 w-full bg-muted rounded-md animate-pulse" />
+                            <div className="h-4 w-3/4 bg-muted rounded-md animate-pulse" />
+                            <div className="h-4 w-5/6 bg-muted rounded-md animate-pulse" />
                         </CardContent>
                     </Card>
                 ))}
@@ -259,7 +262,7 @@ export default function CardsPage() {
                 <p className="text-sm">Tidak ada kartu yang cocok dengan pencarian Anda.</p>
             </div>
         ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {filteredCards.map(card => {
                 const debt = cardDebts.get(card.id) || 0;
                 const availableCredit = card.creditLimit - debt;
@@ -272,10 +275,10 @@ export default function CardsPage() {
                   className="flex flex-col cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => router.push(`/payment?cardId=${card.id}`)}
                 >
-                <CardHeader>
+                <CardHeader className="p-4 pb-2">
                     <div className="flex justify-between items-start">
                         <div>
-                            <CardTitle>{card.cardName}</CardTitle>
+                            <CardTitle className="text-xl">{card.cardName}</CardTitle>
                             <CardDescription>{card.bankName}</CardDescription>
                         </div>
                         <DropdownMenu>
@@ -305,22 +308,22 @@ export default function CardsPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                    <div className="text-lg font-mono text-muted-foreground pt-2 tracking-widest">
+                    <div className="text-base font-mono text-muted-foreground pt-2 tracking-widest">
                         **** **** **** {card.last4Digits}
                     </div>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col justify-between">
+                <CardContent className="p-4 pt-0 flex-grow flex flex-col justify-between">
                     <div>
-                        <div className="mb-4">
+                        <div className="mb-3">
                             <p className="text-sm text-muted-foreground">Sisa Limit Tersedia</p>
                             <p className={cn(
-                                "text-3xl font-bold tracking-tight",
+                                "text-2xl font-bold tracking-tight",
                                 availableCredit < 0 ? "text-destructive" : "text-green-600"
                             )}>
                                 {formatCurrency(availableCredit)}
                             </p>
                         </div>
-                        <div className="space-y-2 mb-4">
+                        <div className="space-y-1.5 mb-3">
                             <Progress value={debtPercentage} aria-label={`${debtPercentage.toFixed(2)}% terpakai`} />
                             <div className="flex justify-between items-baseline text-sm text-muted-foreground">
                                 <span>Terpakai: {formatCurrency(debt)}</span>
@@ -328,7 +331,7 @@ export default function CardsPage() {
                             </div>
                         </div>
                     </div>
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-1.5 text-sm">
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Tgl. Cetak Tagihan</span>
                             <span className="font-medium">Tanggal {card.billingDate}</span>
