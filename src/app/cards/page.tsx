@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { addMonths } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,6 +14,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,8 +46,39 @@ import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog"
 import { Progress } from "@/components/ui/progress";
 import { useFirestoreCollection } from "@/hooks/use-firestore";
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useAuth } from "@/context/auth-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+const CardDetails = ({ card, nextReminderDate }: { card: CreditCard, nextReminderDate: Date | null }) => {
+    return (
+        <div className="grid gap-3 py-4 text-sm">
+            <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Tgl. Cetak</span>
+                <span className="font-medium">Tgl {card.billingDate}</span>
+            </div>
+            <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Jatuh Tempo</span>
+                <span className="font-medium">Tgl {card.dueDate}</span>
+            </div>
+            <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Bunga</span>
+                <span className="font-medium">{card.interestRate}%/thn</span>
+            </div>
+            {nextReminderDate ? (
+                <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Reminder</span>
+                    <span className="font-medium text-right">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' }).format(nextReminderDate)}</span>
+                </div>
+            ) : (
+                <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Reminder</span>
+                    <span className="font-medium">Off</span>
+                </div>
+            )}
+        </div>
+    )
+}
 
 
 export default function CardsPage() {
@@ -58,6 +96,7 @@ export default function CardsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<string>("available-credit-desc");
+  const isMobile = useIsMobile();
 
   const cardDebts = useMemo(() => {
     const debts = new Map<string, number>();
@@ -352,43 +391,42 @@ export default function CardsPage() {
         )}
       </div>
 
-      <Dialog open={!!detailsCard} onOpenChange={(isOpen) => !isOpen && setDetailsCard(null)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Detail Kartu</DialogTitle>
-            <DialogDescription>
-              {detailsCard?.cardName} ({detailsCard?.bankName})
-            </DialogDescription>
-          </DialogHeader>
-          {detailsCard && (
-            <div className="grid gap-3 py-4 text-sm">
-                <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Tgl. Cetak</span>
-                    <span className="font-medium">Tgl {detailsCard.billingDate}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Jatuh Tempo</span>
-                    <span className="font-medium">Tgl {detailsCard.dueDate}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Bunga</span>
-                    <span className="font-medium">{detailsCard.interestRate}%/thn</span>
-                </div>
-                {nextReminderDateForDialog ? (
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Reminder</span>
-                        <span className="font-medium text-right">{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' }).format(nextReminderDateForDialog)}</span>
-                    </div>
-                ) : (
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Reminder</span>
-                        <span className="font-medium">Off</span>
-                    </div>
+      {isMobile ? (
+        <Drawer open={!!detailsCard} onOpenChange={(isOpen) => !isOpen && setDetailsCard(null)}>
+            <DrawerContent>
+                {detailsCard && (
+                    <>
+                        <DrawerHeader className="text-left">
+                            <DrawerTitle>Detail Kartu</DrawerTitle>
+                            <DrawerDescription>
+                            {detailsCard.cardName} ({detailsCard.bankName})
+                            </DrawerDescription>
+                        </DrawerHeader>
+                        <div className="px-4">
+                            <CardDetails card={detailsCard} nextReminderDate={nextReminderDateForDialog} />
+                        </div>
+                    </>
                 )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </DrawerContent>
+        </Drawer>
+        ) : (
+        <Dialog open={!!detailsCard} onOpenChange={(isOpen) => !isOpen && setDetailsCard(null)}>
+            <DialogContent className="sm:max-w-[425px]">
+            {detailsCard && (
+                <>
+                    <DialogHeader>
+                        <DialogTitle>Detail Kartu</DialogTitle>
+                        <DialogDescription>
+                        {detailsCard?.cardName} ({detailsCard?.bankName})
+                        </DialogDescription>
+                    </DialogHeader>
+                    <CardDetails card={detailsCard} nextReminderDate={nextReminderDateForDialog} />
+                </>
+            )}
+            </DialogContent>
+        </Dialog>
+      )}
+
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-[600px]">
