@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { addMonths } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -95,6 +95,7 @@ function CardsPageContent() {
   const [sortOption, setSortOption] = useState<string>("available-credit-desc");
   const isMobile = useIsMobile();
   const [isDragging, setIsDragging] = useState(false);
+  const fabRef = useRef(null);
 
    useEffect(() => {
     if (loadingCards) return;
@@ -429,8 +430,8 @@ function CardsPageContent() {
         )}
       </div>
 
-      <Draggable onStart={handleDragStart} onStop={handleDragStop}>
-        <div className="fixed bottom-8 right-8 z-50 cursor-move">
+      <Draggable nodeRef={fabRef} onStart={handleDragStart} onStop={handleDragStop}>
+        <div ref={fabRef} className="fixed bottom-8 right-8 z-50 cursor-move">
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
