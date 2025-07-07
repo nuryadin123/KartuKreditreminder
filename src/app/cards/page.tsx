@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { addMonths } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,12 +21,6 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -37,9 +31,10 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown } from "lucide-react";
+import { PlusCircle, Edit, Trash2, History, Loader2, Search, ArrowUpDown, MoreVertical } from "lucide-react";
 import type { CreditCard, Transaction } from "@/types";
 import { CardForm, type CardFormValues } from "@/components/cards/card-form";
+import { PaymentDrawer } from "@/components/cards/payment-drawer";
 import { useToast } from "@/hooks/use-toast";
 import { PaymentHistoryDialog } from "@/components/cards/payment-history-dialog";
 import { Progress } from "@/components/ui/progress";
@@ -48,6 +43,7 @@ import { db } from "@/lib/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useAuth } from "@/context/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const CardDetails = ({ card, nextReminderDate }: { card: CreditCard, nextReminderDate: Date | null }) => {
     return (
@@ -79,10 +75,9 @@ const CardDetails = ({ card, nextReminderDate }: { card: CreditCard, nextReminde
     )
 }
 
-
-export default function CardsPage() {
+function CardsPageContent() {
   const { user } = useAuth();
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: cards, loading: loadingCards } = useFirestoreCollection<CreditCard>("cards", user?.uid);
   const { data: transactions, loading: loadingTransactions } = useFirestoreCollection<Transaction>("transactions", user?.uid);
   
@@ -92,10 +87,22 @@ export default function CardsPage() {
   const [detailsCard, setDetailsCard] = useState<CreditCard | null>(null);
   
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
+  const [paymentCard, setPaymentCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<string>("available-credit-desc");
   const isMobile = useIsMobile();
+
+   useEffect(() => {
+    if (loadingCards) return;
+    const cardIdToPay = searchParams.get('pay_for_card');
+    if (cardIdToPay) {
+      const card = cards.find(c => c.id === cardIdToPay);
+      if (card) {
+        setPaymentCard(card);
+      }
+    }
+  }, [searchParams, cards, loadingCards]);
 
   const cardDebts = useMemo(() => {
     const debts = new Map<string, number>();
@@ -214,6 +221,28 @@ export default function CardsPage() {
         handleCloseDeleteAlert();
     }
   };
+
+  const handlePaymentSubmit = async (values: { amount: number }) => {
+    if (!paymentCard || !user) {
+      toast({ title: 'Gagal', description: 'Kartu atau pengguna tidak valid.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const newPayment: Omit<Transaction, 'id'> = {
+        userId: user.uid,
+        cardId: paymentCard.id,
+        date: new Date().toISOString(),
+        description: 'Pembayaran Kartu Kredit',
+        amount: values.amount,
+        category: 'Pembayaran',
+        status: 'lunas',
+      };
+      await addDoc(collection(db, 'transactions'), newPayment);
+      toast({ title: 'Pembayaran Berhasil', description: `Pembayaran sebesar ${formatCurrency(values.amount)} telah dicatat.` });
+    } catch (error: any) {
+      toast({ title: 'Gagal Membayar', description: error.message || 'Terjadi kesalahan.', variant: 'destructive' });
+    }
+  };
   
   const getNextReminderDate = (card: CreditCard): Date | null => {
     if (!card.limitIncreaseReminder || card.limitIncreaseReminder === 'tidak' || !card.lastLimitIncreaseDate) {
@@ -272,17 +301,15 @@ export default function CardsPage() {
 
         {isLoading ? (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
+                {[...Array(8)].map((_, i) => (
                     <Card key={i}>
-                        <CardHeader className="p-4">
+                        <CardHeader className="p-3">
                             <div className="h-5 w-3/4 bg-muted rounded-md animate-pulse" />
                             <div className="h-4 w-1/2 bg-muted rounded-md animate-pulse mt-2" />
                         </CardHeader>
-                        <CardContent className="p-4 pt-0 space-y-3">
+                        <CardContent className="p-3 pt-0 space-y-3">
                             <div className="h-8 w-full bg-muted rounded-md animate-pulse" />
                             <div className="h-4 w-full bg-muted rounded-md animate-pulse" />
-                            <div className="h-4 w-3/4 bg-muted rounded-md animate-pulse" />
-                            <div className="h-4 w-5/6 bg-muted rounded-md animate-pulse" />
                         </CardContent>
                     </Card>
                 ))}
@@ -312,15 +339,15 @@ export default function CardsPage() {
                 <Card 
                   key={card.id} 
                   className="flex flex-col cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => router.push(`/payment?cardId=${card.id}`)}
+                  onClick={() => setPaymentCard(card)}
                 >
                 <CardHeader className="p-3 pb-2">
                     <div className="flex justify-between items-start">
                         <div>
-                            <CardTitle className="text-lg font-semibold leading-tight">{card.cardName}</CardTitle>
+                            <CardTitle className="text-base font-semibold leading-tight">{card.cardName}</CardTitle>
                             <CardDescription className="text-xs">{card.bankName}</CardDescription>
                         </div>
-                        <div className="flex items-center -mr-2">
+                         <div className="flex items-center -mr-2 flex-shrink-0">
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -350,8 +377,8 @@ export default function CardsPage() {
                             </Button>
                         </div>
                     </div>
-                    <div className="text-sm font-mono text-muted-foreground pt-1 tracking-wider">
-                        **** **** **** {card.last4Digits}
+                    <div className="text-xs font-mono text-muted-foreground pt-1 tracking-wider">
+                        **** {card.last4Digits}
                     </div>
                 </CardHeader>
                 <CardContent className="p-3 pt-2 flex-grow flex flex-col justify-between">
@@ -359,7 +386,7 @@ export default function CardsPage() {
                         <div className="mb-2">
                             <p className="text-xs text-muted-foreground">Sisa Limit</p>
                             <p className={cn(
-                                "text-xl font-bold tracking-tight",
+                                "text-lg font-bold tracking-tight",
                                 availableCredit < 0 ? "text-destructive" : "text-green-600"
                             )}>
                                 {formatCurrency(availableCredit)}
@@ -460,6 +487,18 @@ export default function CardsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <PaymentDrawer
+        card={paymentCard}
+        transactions={transactions}
+        open={!!paymentCard}
+        onOpenChange={(isOpen) => {
+            if (!isOpen) {
+                setPaymentCard(null);
+            }
+        }}
+        onSubmit={handlePaymentSubmit}
+       />
 
       <PaymentHistoryDialog
         card={selectedCard}
@@ -469,4 +508,13 @@ export default function CardsPage() {
       />
     </>
   );
+}
+
+
+export default function CardsPage() {
+    return (
+        <Suspense fallback={<div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <CardsPageContent />
+        </Suspense>
+    )
 }

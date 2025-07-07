@@ -246,7 +246,7 @@ export default function Home() {
                                             <span>Jatuh tempo pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
                                             <span className="font-semibold block sm:inline sm:ml-4 text-destructive">{formatCurrency(debt)}</span>
                                         </div>
-                                        <Button size="sm" onClick={() => router.push(`/payment?cardId=${card.id}`)}>Bayar</Button>
+                                        <Button size="sm" onClick={() => router.push(`/cards?pay_for_card=${card.id}`)}>Bayar</Button>
                                     </div>
                                 </AlertDescription>
                             </Alert>
@@ -274,7 +274,7 @@ export default function Home() {
                                             <span>Seharusnya dibayar pada {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dueDate)}</span>
                                             <span className="font-semibold block sm:inline sm:ml-4">{formatCurrency(debt)}</span>
                                         </div>
-                                        <Button variant="destructive" size="sm" onClick={() => router.push(`/payment?cardId=${card.id}`)}>Bayar Sekarang</Button>
+                                        <Button variant="destructive" size="sm" onClick={() => router.push(`/cards?pay_for_card=${card.id}`)}>Bayar Sekarang</Button>
                                     </div>
                                 </AlertDescription>
                             </Alert>
