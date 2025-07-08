@@ -9,17 +9,19 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, CreditCard, Calculator, LogOut, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, Receipt, CreditCard, Calculator, LogOut, Moon, Sun, PanelLeftClose } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { auth } from "@/lib/firebase";
 import { Button } from "../ui/button";
 import { useTheme } from "@/context/theme-provider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 
 const links = [
   { href: "/", label: "Dasbor", icon: LayoutDashboard },
@@ -32,6 +34,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { setTheme } = useTheme();
+  const { toggleSidebar } = useSidebar();
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -50,7 +53,7 @@ export function AppSidebar() {
             <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground")}>
                 <CreditCard className="h-5 w-5"/>
             </div>
-            <span className="text-lg font-semibold">KreditTrack</span>
+            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">KreditTrack</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -72,12 +75,23 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
+        <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={toggleSidebar} tooltip={{ children: "Sembunyikan/Tampilkan Navigasi" }}>
+                <PanelLeftClose />
+                <span>Sembunyikan</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
+
+        <Separator className="my-1" />
+
         <div className="flex items-center gap-2 p-2">
           <Avatar className="h-9 w-9">
             <AvatarImage src="" alt="User Avatar" />
             <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col overflow-hidden flex-grow">
+          <div className="flex flex-col overflow-hidden flex-grow group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-medium truncate">{user?.displayName || 'Pengguna'}</span>
             <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
           </div>
